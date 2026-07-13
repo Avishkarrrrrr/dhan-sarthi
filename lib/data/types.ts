@@ -1,4 +1,4 @@
-export type AssetClass = "equity" | "mutual_fund" | "fd" | "gold" | "cash";
+export type AssetClass = "equity" | "mutual_fund" | "bonds" | "fd" | "gold" | "cash";
 
 /** A single holding. `value` is current market value in INR. */
 export interface Holding {

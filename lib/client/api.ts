@@ -17,11 +17,12 @@ export async function postChat(
   customerId: string,
   messages: ChatMsg[],
   language: string,
+  holdings?: import("@/lib/data/types").Holding[],
 ): Promise<{ reply: string; provider: string }> {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ customerId, messages, language }),
+    body: JSON.stringify({ customerId, messages, language, holdings }),
   });
   if (!res.ok) throw new Error(`chat ${res.status}`);
   return res.json();

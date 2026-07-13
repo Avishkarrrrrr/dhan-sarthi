@@ -4,6 +4,7 @@ import { buildSystemPrompt } from "@/lib/llm/prompt";
 import { selectProvider } from "@/lib/llm/select";
 import { FallbackProvider } from "@/lib/llm/fallback";
 import type { ChatMsg } from "@/lib/llm/provider";
+import type { Holding } from "@/lib/data/types";
 
 export const runtime = "nodejs";
 
@@ -11,6 +12,7 @@ interface ChatBody {
   customerId: string;
   messages: ChatMsg[];
   language?: string;
+  holdings?: Holding[];
 }
 
 export async function POST(req: NextRequest) {
@@ -21,16 +23,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { customerId, messages, language = "en-IN" } = body;
+  const { customerId, messages, language = "en-IN", holdings } = body;
   if (!customerId || !Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "customerId and messages are required" }, { status: 400 });
   }
 
-  const customer = getCustomer(customerId);
-  if (!customer) {
+  const base = getCustomer(customerId);
+  if (!base) {
     return NextResponse.json({ error: "Unknown customer" }, { status: 404 });
   }
 
+  // Ground on the live portfolio (linked accounts + added investments) if provided.
+  const customer = holdings && holdings.length ? { ...base, holdings } : base;
   const system = buildSystemPrompt(customer, language);
   const provider = selectProvider();
 

@@ -1,40 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { postOptimize } from "@/lib/client/api";
-import { rebalanceOrders, type MptResult, type RebalanceOrder } from "@/lib/finance/mpt";
+import { optimizePortfolio, rebalanceOrders, type MptResult, type RebalanceOrder } from "@/lib/finance/mpt";
+import { netWorth as computeNetWorth } from "@/lib/finance/metrics";
+import type { Customer } from "@/lib/data/types";
 import { FrontierChart } from "./charts/FrontierChart";
 import { inrCompact } from "@/lib/format";
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 export function PortfolioOptimizer({
-  customerId,
+  customer,
   onAskAdvisor,
 }: {
-  customerId: string;
+  customer: Customer;
   onAskAdvisor: (p: string) => void;
 }) {
   const [result, setResult] = useState<MptResult | null>(null);
-  const [netWorth, setNetWorth] = useState(0);
   const [loading, setLoading] = useState(false);
   const [rebalancing, setRebalancing] = useState<"idle" | "running" | "done">("idle");
   const [filled, setFilled] = useState<RebalanceOrder[]>([]);
+  const netWorth = computeNetWorth(customer);
 
-  const run = async () => {
+  const run = () => {
     setLoading(true);
     setResult(null);
     setRebalancing("idle");
     setFilled([]);
-    try {
-      const { result, netWorth } = await postOptimize(customerId);
-      setResult(result);
-      setNetWorth(netWorth);
-    } catch {
-      /* ignore */
-    } finally {
+    // Run on next tick so the "running…" state paints (MC sim is synchronous).
+    setTimeout(() => {
+      setResult(optimizePortfolio(customer));
       setLoading(false);
-    }
+    }, 50);
   };
 
   const rebalance = () => {

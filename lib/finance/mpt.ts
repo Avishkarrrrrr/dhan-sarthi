@@ -23,6 +23,7 @@ const N_PORTFOLIOS = 8000;
 const ASSUMPTIONS: Record<AssetClass, { ret: number; vol: number }> = {
   equity: { ret: 0.13, vol: 0.2 },
   mutual_fund: { ret: 0.115, vol: 0.16 },
+  bonds: { ret: 0.08, vol: 0.05 },
   gold: { ret: 0.09, vol: 0.14 },
   fd: { ret: 0.07, vol: 0.012 },
   cash: { ret: 0.035, vol: 0.005 },
@@ -30,11 +31,12 @@ const ASSUMPTIONS: Record<AssetClass, { ret: number; vol: number }> = {
 
 // Correlation between asset classes (symmetric).
 const CORR: Record<AssetClass, Record<AssetClass, number>> = {
-  equity: { equity: 1, mutual_fund: 0.9, gold: 0.15, fd: 0.0, cash: 0.0 },
-  mutual_fund: { equity: 0.9, mutual_fund: 1, gold: 0.2, fd: 0.05, cash: 0.0 },
-  gold: { equity: 0.15, mutual_fund: 0.2, gold: 1, fd: 0.0, cash: 0.0 },
-  fd: { equity: 0.0, mutual_fund: 0.05, gold: 0.0, fd: 1, cash: 0.3 },
-  cash: { equity: 0.0, mutual_fund: 0.0, gold: 0.0, fd: 0.3, cash: 1 },
+  equity: { equity: 1, mutual_fund: 0.9, bonds: -0.1, gold: 0.15, fd: 0.0, cash: 0.0 },
+  mutual_fund: { equity: 0.9, mutual_fund: 1, bonds: 0.0, gold: 0.2, fd: 0.05, cash: 0.0 },
+  bonds: { equity: -0.1, mutual_fund: 0.0, bonds: 1, gold: 0.1, fd: 0.6, cash: 0.2 },
+  gold: { equity: 0.15, mutual_fund: 0.2, bonds: 0.1, gold: 1, fd: 0.0, cash: 0.0 },
+  fd: { equity: 0.0, mutual_fund: 0.05, bonds: 0.6, gold: 0.0, fd: 1, cash: 0.3 },
+  cash: { equity: 0.0, mutual_fund: 0.0, bonds: 0.2, gold: 0.0, fd: 0.3, cash: 1 },
 };
 
 export interface PortfolioMetrics {

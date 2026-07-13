@@ -1,62 +1,75 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fetchProfile } from "@/lib/client/api";
-import type { ProfileResponse } from "@/lib/finance/profile";
 import { AllocationChart } from "./charts/AllocationChart";
 import { SpendingChart } from "./charts/SpendingChart";
 import { PortfolioOptimizer } from "./PortfolioOptimizer";
+import { AccountsPanel } from "./AccountsPanel";
 import { inr, inrCompact } from "@/lib/format";
-import type { Nudge } from "@/lib/finance/metrics";
+import {
+  allocation,
+  computeNudges,
+  monthlySurplus,
+  netWorth,
+  spendingInsights,
+  type Nudge,
+} from "@/lib/finance/metrics";
+import type { Customer, Holding } from "@/lib/data/types";
 
-export function Dashboard({ customerId, onAskAdvisor }: { customerId: string; onAskAdvisor: (p: string) => void }) {
-  const [profile, setProfile] = useState<ProfileResponse | null>(null);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let live = true;
-    setProfile(null);
-    setError(false);
-    fetchProfile(customerId)
-      .then((p) => live && setProfile(p))
-      .catch(() => live && setError(true));
-    return () => {
-      live = false;
-    };
-  }, [customerId]);
-
-  if (error) return <ScreenMsg>Couldn't load your portfolio. Please retry.</ScreenMsg>;
-  if (!profile) return <ScreenMsg>Loading your 360° view…</ScreenMsg>;
+export function Dashboard({
+  customer,
+  holdings,
+  setHoldings,
+  bankLinked,
+  setBankLinked,
+  onAskAdvisor,
+}: {
+  customer: Customer;
+  holdings: Holding[];
+  setHoldings: (h: Holding[]) => void;
+  bankLinked: boolean;
+  setBankLinked: (v: boolean) => void;
+  onAskAdvisor: (p: string) => void;
+}) {
+  // Live portfolio = base customer with the currently linked/added holdings.
+  const live: Customer = { ...customer, holdings };
+  const nw = netWorth(live);
+  const alloc = allocation(live);
+  const spends = spendingInsights(live);
+  const nudges = computeNudges(live);
+  const surplus = monthlySurplus(live);
 
   return (
     <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4">
       {/* Net worth header */}
       <div className="rounded-2xl bg-brand-deep p-4 text-white shadow-soft">
-        <p className="text-xs text-white/70">Total net worth</p>
-        <p className="mt-0.5 text-3xl font-bold tracking-tight">{inr(profile.netWorth)}</p>
+        <p className="text-xs text-white/70">Total net worth {bankLinked && <span className="text-brand-accent">· bank linked</span>}</p>
+        <p className="mt-0.5 text-3xl font-bold tracking-tight">{inr(nw)}</p>
         <p className="mt-1 text-xs text-white/70">
-          Est. monthly surplus{" "}
-          <span className="font-semibold text-brand-accent">{inrCompact(profile.monthlySurplus)}</span>
+          Est. monthly surplus <span className="font-semibold text-brand-accent">{inrCompact(surplus)}</span>
         </p>
       </div>
 
-      <Card title="Asset allocation">
-        <AllocationChart data={profile.allocation} />
-      </Card>
+      <AccountsPanel holdings={holdings} setHoldings={setHoldings} bankLinked={bankLinked} setBankLinked={setBankLinked} />
+
+      {alloc.length > 0 && (
+        <Card title="Asset allocation">
+          <AllocationChart data={alloc} />
+        </Card>
+      )}
 
       <Card title="Where your money goes (monthly)">
-        <SpendingChart data={profile.spendingInsights} />
+        <SpendingChart data={spends} />
       </Card>
 
       <Card title="Dhan Sarthi noticed">
         <ul className="space-y-2">
-          {profile.nudges.map((n) => (
+          {nudges.map((n) => (
             <NudgeRow key={n.id} n={n} />
           ))}
         </ul>
       </Card>
 
-      <PortfolioOptimizer customerId={customerId} onAskAdvisor={onAskAdvisor} />
+      <PortfolioOptimizer customer={live} onAskAdvisor={onAskAdvisor} />
     </div>
   );
 }
@@ -84,8 +97,4 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       {children}
     </section>
   );
-}
-
-function ScreenMsg({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-ink/50">{children}</div>;
 }

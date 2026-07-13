@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PhoneFrame } from "@/components/PhoneFrame";
 import { NavBar, type Screen } from "@/components/NavBar";
 import { ChatPanel } from "@/components/ChatPanel";
@@ -8,7 +8,8 @@ import { Dashboard } from "@/components/Dashboard";
 import { GoalPlanner } from "@/components/GoalPlanner";
 import { StrategyStudio } from "@/components/StrategyStudio";
 import { CompanyLens } from "@/components/CompanyLens";
-import { listCustomers } from "@/lib/data/customers";
+import { listCustomers, getCustomer } from "@/lib/data/customers";
+import type { Holding } from "@/lib/data/types";
 
 export default function Home() {
   const customers = listCustomers();
@@ -17,7 +18,18 @@ export default function Home() {
   const [prefill, setPrefill] = useState<string | undefined>();
 
   const current = customers.find((c) => c.id === customerId)!;
+  const fullCustomer = getCustomer(customerId)!;
   const firstName = current.name.split(" ")[0];
+
+  // Editable portfolio state (linked bank accounts + added investments).
+  const [holdings, setHoldings] = useState<Holding[]>(fullCustomer.holdings);
+  const [bankLinked, setBankLinked] = useState(false);
+
+  // Reset the portfolio when switching demo customers.
+  useEffect(() => {
+    setHoldings(getCustomer(customerId)!.holdings);
+    setBankLinked(false);
+  }, [customerId]);
 
   const askAdvisor = (prompt: string) => {
     setPrefill(prompt);
@@ -82,11 +94,21 @@ export default function Home() {
           <ChatPanel
             customerId={customerId}
             customerName={current.name}
+            holdings={holdings}
             prefill={prefill}
             onPrefillConsumed={() => setPrefill(undefined)}
           />
         )}
-        {screen === "dashboard" && <Dashboard customerId={customerId} onAskAdvisor={askAdvisor} />}
+        {screen === "dashboard" && (
+          <Dashboard
+            customer={fullCustomer}
+            holdings={holdings}
+            setHoldings={setHoldings}
+            bankLinked={bankLinked}
+            setBankLinked={setBankLinked}
+            onAskAdvisor={askAdvisor}
+          />
+        )}
         {screen === "planner" && <GoalPlanner customerId={customerId} onAskAdvisor={askAdvisor} />}
         {screen === "strategy" && <StrategyStudio onAskAdvisor={askAdvisor} />}
         {screen === "lens" && <CompanyLens onAskAdvisor={askAdvisor} />}

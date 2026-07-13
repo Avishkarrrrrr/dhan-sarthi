@@ -25,11 +25,13 @@ const CHIPS = [
 export function ChatPanel({
   customerId,
   customerName,
+  holdings,
   prefill,
   onPrefillConsumed,
 }: {
   customerId: string;
   customerName: string;
+  holdings?: import("@/lib/data/types").Holding[];
   prefill?: string;
   onPrefillConsumed?: () => void;
 }) {
@@ -72,7 +74,7 @@ export function ChatPanel({
       setInput("");
       setThinking(true);
       try {
-        const { reply, provider: p } = await postChat(customerId, next, language);
+        const { reply, provider: p } = await postChat(customerId, next, language, holdings);
         setProvider(p);
         setMessages([...next, { role: "assistant", content: reply }]);
         if (voiceOut) void speak(reply, language);
@@ -85,7 +87,7 @@ export function ChatPanel({
         setThinking(false);
       }
     },
-    [messages, thinking, customerId, language, voiceOut, speak, stopSpeaking],
+    [messages, thinking, customerId, language, voiceOut, speak, stopSpeaking, holdings],
   );
 
   // Consume a prefill coming from the Goal planner ("Ask Dhan Sarthi about this").

@@ -15,10 +15,11 @@ export function inrCompact(n: number): string {
 export const ASSET_LABELS: Record<string, string> = {
   equity: "Equity",
   mutual_fund: "Mutual Funds",
+  bonds: "Bonds",
   fd: "Fixed Deposits",
   gold: "Gold",
   cash: "Cash & Liquid",
 };
 
 /** Chart palette derived from the brand green. */
-export const CHART_COLORS = ["#0B7A4B", "#12B886", "#38D9A9", "#0CA678", "#087F5B", "#66D9AE"];
+export const CHART_COLORS = ["#0B7A4B", "#12B886", "#38D9A9", "#0CA678", "#087F5B", "#66D9AE", "#2F9E44"];
