@@ -1,0 +1,38 @@
+{
+  "name": "dhan-sarthi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Avatar-based digital wealth advisor — IDBI Innovate Track 01 (Team Flexi Masters)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "Flexi Masters",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "^2.11.0",
+    "framer-motion": "^12.42.2",
+    "next": "^15.5.20",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.9.2"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.1.1",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.0.3",
+    "autoprefixer": "^10.5.2",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.5.19",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-green: #0B7A4B;
+  --brand-deep: #064E36;
+  --brand-accent: #12B886;
+  --brand-light: #E6F4EE;
+  --surface: #F5F7F6;
+  --ink: #0E1B14;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #0b7a4b1a, transparent),
+    linear-gradient(180deg, #eef3f0 0%, #dfe9e3 100%);
+  min-height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* thin scrollbars inside the phone */
+.phone-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.phone-scroll::-webkit-scrollbar-thumb {
+  background: #0b7a4b40;
+  border-radius: 999px;
+}
