@@ -86,7 +86,7 @@ export default function Home() {
             onPrefillConsumed={() => setPrefill(undefined)}
           />
         )}
-        {screen === "dashboard" && <Dashboard customerId={customerId} />}
+        {screen === "dashboard" && <Dashboard customerId={customerId} onAskAdvisor={askAdvisor} />}
         {screen === "planner" && <GoalPlanner customerId={customerId} onAskAdvisor={askAdvisor} />}
         {screen === "strategy" && <StrategyStudio onAskAdvisor={askAdvisor} />}
         {screen === "lens" && <CompanyLens onAskAdvisor={askAdvisor} />}

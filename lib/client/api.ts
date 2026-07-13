@@ -5,6 +5,7 @@ import type { Goal } from "@/lib/data/types";
 import type { MarketSnapshot } from "@/lib/market/nifty";
 import type { StrategyInput, StrategyResult } from "@/lib/strategy/engine";
 import type { CompanyAnalysis } from "@/lib/research/companies";
+import type { MptResult } from "@/lib/finance/mpt";
 
 export async function fetchProfile(id: string): Promise<ProfileResponse> {
   const res = await fetch(`/api/profile?id=${encodeURIComponent(id)}`);
@@ -86,5 +87,15 @@ export async function postResearch(companyId: string): Promise<{ analysis: Compa
     body: JSON.stringify({ companyId }),
   });
   if (!res.ok) throw new Error(`research ${res.status}`);
+  return res.json();
+}
+
+export async function postOptimize(customerId: string): Promise<{ result: MptResult; netWorth: number }> {
+  const res = await fetch("/api/optimize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ customerId }),
+  });
+  if (!res.ok) throw new Error(`optimize ${res.status}`);
   return res.json();
 }

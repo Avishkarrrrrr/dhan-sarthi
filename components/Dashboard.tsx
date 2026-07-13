@@ -5,10 +5,11 @@ import { fetchProfile } from "@/lib/client/api";
 import type { ProfileResponse } from "@/lib/finance/profile";
 import { AllocationChart } from "./charts/AllocationChart";
 import { SpendingChart } from "./charts/SpendingChart";
+import { PortfolioOptimizer } from "./PortfolioOptimizer";
 import { inr, inrCompact } from "@/lib/format";
 import type { Nudge } from "@/lib/finance/metrics";
 
-export function Dashboard({ customerId }: { customerId: string }) {
+export function Dashboard({ customerId, onAskAdvisor }: { customerId: string; onAskAdvisor: (p: string) => void }) {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [error, setError] = useState(false);
 
@@ -54,6 +55,8 @@ export function Dashboard({ customerId }: { customerId: string }) {
           ))}
         </ul>
       </Card>
+
+      <PortfolioOptimizer customerId={customerId} onAskAdvisor={onAskAdvisor} />
     </div>
   );
 }
