@@ -34,8 +34,21 @@ Wealth management and advisory remain **fragmented and inaccessible** to the mas
 - 📊 **360° financial snapshot** — net worth, asset allocation, spending breakdown
 - 🎯 **Goal planner & simulator** — live retirement / home / education projections
 - 🔔 **Proactive nudges** — emergency-fund, allocation-drift, top-spend insights
+- 🤖 **Strategy Studio** — ML-predicted algorithmic strategy from your inputs + **live Nifty technicals** (EMA/RSI/India-VIX), with a mock broker-connect & **simulated** automated execution
+- 🔎 **Company Lens** — AI analysis of a company's latest **concall + investor presentation** into a 4-part insight (Quarter results · Risks · Projections · Verdict)
 - 🛡️ **Compliance guardrails** — non-advice disclaimers, escalate-to-RM
 - 🌐 **Runs on free tiers** — Gemini + Sarvam ₹100 credits + Vercel ≈ **₹0**
+
+### Integrated prior work
+
+Three of the team's earlier projects are folded in as add-on features:
+
+| Project | Integrated as |
+|---|---|
+| [`final_year_project`](https://github.com/Avishkarrrrrr/final_year_project) — RandomForest that predicts an algo-trading strategy from risk/return/amount + market technicals | **Strategy Studio**: the model's inputs + strategy taxonomy (EMA Crossover, VCP, Flag, Fibonacci, Resistance Breakout, 55-EMA Support, Bottom) ported to an explainable in-app engine over live Nifty data |
+| [`financial_statement_analyzer`](https://github.com/Avishkarrrrrr/financial_statement_analyzer) + [`concall_insights`](https://github.com/Avishkarrrrrr/concall_insights) — LLM analysis of concall transcripts & investor presentations | **Company Lens**: the 4-part structured analysis, run by Gemini over bundled real-company documents (live Screener.in scraping is the production path) |
+
+> **Note on trade execution:** Strategy Studio's automation is a clearly-labelled **simulation** against a mock broker — no real broker is connected and no real orders are placed. In production this maps to a broker-API integration behind explicit user authorisation and regulatory controls.
 
 ## Architecture
 
@@ -49,7 +62,7 @@ Mobile-framed UI  →  Next.js API routes (secure proxy)  →  Gemini 2.5 Flash 
 
 ## Tech stack
 
-Next.js 15 · TypeScript · Tailwind CSS · Framer Motion · Recharts · Google Gemini API · Sarvam AI (Bulbul TTS + Saarika STT) · Vitest · Vercel.
+Next.js 15 · TypeScript · Tailwind CSS · Framer Motion · Recharts · Google Gemini API · Sarvam AI (Bulbul TTS + Saarika STT) · live Nifty market data (Yahoo Finance) · Vitest · Vercel.
 
 ## Run locally
 

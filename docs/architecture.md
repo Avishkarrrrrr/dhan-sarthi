@@ -59,6 +59,11 @@ Single **Next.js (App Router)** full-stack application. The client renders a pho
 
 RAG-lite: the customer's 360° dataset is small and bounded, so it is injected directly into the system prompt as structured facts rather than retrieved from a vector store. Finance math (`lib/finance/*`) is pure and unit-tested, so the numbers the model sees are trustworthy and reproducible.
 
+## Add-on feature routes
+
+- **`/api/strategy`** — fetches a live Nifty snapshot (EMA flags, RSI, India VIX from Yahoo Finance, synthetic fallback) and runs the ported strategy engine (`lib/strategy/engine.ts`) to predict an algorithmic strategy with rationale + simulated orders. Powers **Strategy Studio**; the broker automation is a client-side simulation only.
+- **`/api/research`** — runs the selected LLM over a bundled company document (`lib/research/companies.ts`) to produce the 4-part analysis; falls back to a cached analysis when no key is present. Powers **Company Lens**.
+
 ## Resilience
 
 Every external dependency has a fallback (LLM → guided responses; Sarvam voice → Web Speech). The app is fully usable — and demoable — with zero keys configured.
