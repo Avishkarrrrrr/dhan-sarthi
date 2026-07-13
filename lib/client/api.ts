@@ -81,13 +81,18 @@ export async function postStrategy(input: StrategyInput): Promise<{ market: Mark
   return res.json();
 }
 
-export async function postResearch(companyId: string): Promise<{ analysis: CompanyAnalysis; source: string; company: string }> {
+export async function postResearch(
+  params: { companyId?: string; query?: string },
+): Promise<{ analysis: CompanyAnalysis; source: string; company: string }> {
   const res = await fetch("/api/research", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ companyId }),
+    body: JSON.stringify(params),
   });
-  if (!res.ok) throw new Error(`research ${res.status}`);
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({}));
+    throw new Error(msg.error || `research ${res.status}`);
+  }
   return res.json();
 }
 

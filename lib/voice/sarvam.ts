@@ -21,43 +21,75 @@ export interface TtsPayload {
   model: string;
 }
 
-/** Build the Sarvam TTS request payload; truncates to the input limit. */
+/** Build the Sarvam TTS request payload for a single (already-sized) chunk. */
 export function buildTtsPayload(text: string, language: string): TtsPayload {
   const lang = SPEAKERS[language] ? language : "en-IN";
-  const clean = text.replace(/\s+/g, " ").trim().slice(0, SARVAM_TTS_LIMIT);
   return {
-    text: clean,
+    text: text.replace(/\s+/g, " ").trim().slice(0, SARVAM_TTS_LIMIT),
     target_language_code: lang,
     speaker: SPEAKERS[lang],
     model: "bulbul:v2",
   };
 }
 
+/** Split text into TTS-sized chunks on sentence/word boundaries. */
+export function chunkText(text: string, limit = SARVAM_TTS_LIMIT): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= limit) return clean ? [clean] : [];
+  const sentences = clean.match(/[^.!?]+[.!?]*\s*/g) ?? [clean];
+  const chunks: string[] = [];
+  let cur = "";
+  for (const s of sentences) {
+    if ((cur + s).length > limit && cur) {
+      chunks.push(cur.trim());
+      cur = "";
+    }
+    // A single very long sentence: hard-split by words.
+    if (s.length > limit) {
+      for (const word of s.split(" ")) {
+        if ((cur + " " + word).length > limit && cur) {
+          chunks.push(cur.trim());
+          cur = "";
+        }
+        cur += (cur ? " " : "") + word;
+      }
+    } else {
+      cur += s;
+    }
+  }
+  if (cur.trim()) chunks.push(cur.trim());
+  return chunks;
+}
+
 export interface TtsResult {
   engine: "sarvam" | "none";
-  audio?: string; // base64 wav
+  audios?: string[]; // base64 wav chunks, in order
   mime?: string;
 }
 
-/** Call Sarvam Bulbul TTS. Returns engine:'none' if no key (client falls back). */
+/** Call Sarvam Bulbul TTS, chunking long text so the whole reply is spoken. */
 export async function synthesize(text: string, language: string): Promise<TtsResult> {
   const apiKey = process.env.SARVAM_API_KEY;
   if (!apiKey) return { engine: "none" };
 
-  const payload = buildTtsPayload(text, language);
-  const res = await fetch("https://api.sarvam.ai/text-to-speech", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-subscription-key": apiKey,
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`Sarvam TTS ${res.status}`);
-  const data = await res.json();
-  const audio: string | undefined = data?.audios?.[0];
-  if (!audio) return { engine: "none" };
-  return { engine: "sarvam", audio, mime: "audio/wav" };
+  const chunks = chunkText(text);
+  if (!chunks.length) return { engine: "none" };
+
+  const audios: string[] = [];
+  for (const chunk of chunks) {
+    const res = await fetch("https://api.sarvam.ai/text-to-speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "api-subscription-key": apiKey },
+      body: JSON.stringify(buildTtsPayload(chunk, language)),
+    });
+    if (!res.ok) throw new Error(`Sarvam TTS ${res.status}`);
+    const data = await res.json();
+    // Sarvam may return one or more audio segments per request.
+    const segs: string[] = data?.audios ?? [];
+    audios.push(...segs);
+  }
+  if (!audios.length) return { engine: "none" };
+  return { engine: "sarvam", audios, mime: "audio/wav" };
 }
 
 export interface SttResult {

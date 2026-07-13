@@ -163,7 +163,7 @@ export function ChatPanel({
       <div className="border-t border-brand-light px-3 pb-2 pt-2">
         <div className="flex items-end gap-2">
           <button
-            onClick={() => (isRecording ? stopRecording() : startRecording())}
+            onClick={() => (isRecording ? stopRecording() : startRecording(language))}
             aria-label={isRecording ? "Stop recording" : "Speak"}
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
               isRecording ? "animate-pulse bg-red-500 text-white" : "bg-brand-green/10 text-brand-green"

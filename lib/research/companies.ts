@@ -112,3 +112,17 @@ export function listCompanies(): Omit<Company, "document" | "cached">[] {
 export function getCompany(id: string): Company | undefined {
   return COMPANIES.find((c) => c.id === id);
 }
+
+/** Match a free-text query (symbol or name) to a bundled company, if any. */
+export function findCompanyByQuery(query: string): Company | undefined {
+  const q = query.trim().toLowerCase();
+  if (!q) return undefined;
+  return COMPANIES.find(
+    (c) =>
+      c.id === q ||
+      c.ticker.toLowerCase() === q ||
+      c.name.toLowerCase() === q ||
+      c.name.toLowerCase().includes(q) ||
+      c.ticker.toLowerCase().includes(q),
+  );
+}
