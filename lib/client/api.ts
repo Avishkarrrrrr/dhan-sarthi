@@ -2,6 +2,9 @@ import type { ProfileResponse } from "@/lib/finance/profile";
 import type { ChatMsg } from "@/lib/llm/provider";
 import type { ProjectionRow, GoalVerdict } from "@/lib/finance/simulate";
 import type { Goal } from "@/lib/data/types";
+import type { MarketSnapshot } from "@/lib/market/nifty";
+import type { StrategyInput, StrategyResult } from "@/lib/strategy/engine";
+import type { CompanyAnalysis } from "@/lib/research/companies";
 
 export async function fetchProfile(id: string): Promise<ProfileResponse> {
   const res = await fetch(`/api/profile?id=${encodeURIComponent(id)}`);
@@ -63,5 +66,25 @@ export async function postSimulateRetirement(
     body: JSON.stringify({ mode: "retirement", customerId, monthlyContribution, annualReturnPct, currentCorpus, years }),
   });
   if (!res.ok) throw new Error(`simulate ${res.status}`);
+  return res.json();
+}
+
+export async function postStrategy(input: StrategyInput): Promise<{ market: MarketSnapshot; result: StrategyResult }> {
+  const res = await fetch("/api/strategy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`strategy ${res.status}`);
+  return res.json();
+}
+
+export async function postResearch(companyId: string): Promise<{ analysis: CompanyAnalysis; source: string; company: string }> {
+  const res = await fetch("/api/research", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ companyId }),
+  });
+  if (!res.ok) throw new Error(`research ${res.status}`);
   return res.json();
 }

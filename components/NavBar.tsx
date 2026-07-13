@@ -1,6 +1,6 @@
 "use client";
 
-export type Screen = "advisor" | "dashboard" | "planner";
+export type Screen = "advisor" | "dashboard" | "planner" | "strategy" | "lens";
 
 const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
   {
@@ -22,6 +22,18 @@ const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
       <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 4a6 6 0 1 1-6 6 6 6 0 0 1 6-6Zm0 3a3 3 0 1 0 3 3 3 3 0 0 0-3-3Z" />
     ),
   },
+  {
+    id: "strategy",
+    label: "Strategy",
+    icon: <path d="M3 3v18h18v-2H5V3H3Zm4 12 4-4 3 3 5-6-1.5-1.2L14 12l-3-3-6 6 2 0Z" />,
+  },
+  {
+    id: "lens",
+    label: "Lens",
+    icon: (
+      <path d="M10 2a8 8 0 1 0 5 14.3l5.3 5.3 1.4-1.4-5.3-5.3A8 8 0 0 0 10 2Zm0 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" />
+    ),
+  },
 ];
 
 export function NavBar({
@@ -32,18 +44,18 @@ export function NavBar({
   onChange: (s: Screen) => void;
 }) {
   return (
-    <nav className="sticky bottom-0 z-20 mt-auto grid grid-cols-3 border-t border-brand-light bg-white/95 backdrop-blur">
+    <nav className="sticky bottom-0 z-20 mt-auto grid grid-cols-5 border-t border-brand-light bg-white/95 backdrop-blur">
       {TABS.map((t) => {
         const on = active === t.id;
         return (
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
-            className={`flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+            className={`flex flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors ${
               on ? "text-brand-green" : "text-ink/45"
             }`}
           >
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth={on ? 0 : 1.6}>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth={on ? 0 : 1.6}>
               {t.icon}
             </svg>
             {t.label}

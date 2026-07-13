@@ -6,6 +6,8 @@ import { NavBar, type Screen } from "@/components/NavBar";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Dashboard } from "@/components/Dashboard";
 import { GoalPlanner } from "@/components/GoalPlanner";
+import { StrategyStudio } from "@/components/StrategyStudio";
+import { CompanyLens } from "@/components/CompanyLens";
 import { listCustomers } from "@/lib/data/customers";
 
 export default function Home() {
@@ -86,6 +88,8 @@ export default function Home() {
         )}
         {screen === "dashboard" && <Dashboard customerId={customerId} />}
         {screen === "planner" && <GoalPlanner customerId={customerId} onAskAdvisor={askAdvisor} />}
+        {screen === "strategy" && <StrategyStudio onAskAdvisor={askAdvisor} />}
+        {screen === "lens" && <CompanyLens onAskAdvisor={askAdvisor} />}
 
         <NavBar active={screen} onChange={setScreen} />
       </PhoneFrame>
