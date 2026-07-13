@@ -1,8 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import type { ChatMsg, LlmProvider } from "./provider";
 
-const PRIMARY = "gemini-2.5-flash";
-const FALLBACK_MODEL = "gemini-2.5-flash-lite";
+const PRIMARY = "gemini-3.5-flash";
+const FALLBACK_MODEL = "gemini-flash-lite-latest";
 
 export class GeminiProvider implements LlmProvider {
   name = "gemini" as const;

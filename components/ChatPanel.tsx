@@ -110,7 +110,7 @@ export function ChatPanel({
           <span className="text-sm font-semibold text-brand-deep">Dhan Sarthi</span>
           {provider && (
             <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green">
-              {provider === "gemini" ? "Gemini 2.5" : provider === "sarvam" ? "Sarvam-M" : "Guided"}
+              {provider === "gemini" ? "Gemini 3.5" : provider === "sarvam" ? "Sarvam-M" : "Guided"}
             </span>
           )}
         </div>

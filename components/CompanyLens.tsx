@@ -80,7 +80,7 @@ export function CompanyLens({ onAskAdvisor }: { onAskAdvisor: (p: string) => voi
               {company.name} · {company.latestPeriod}
             </p>
             <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green">
-              {source === "cached" ? "Cached analysis" : source === "gemini" ? "Gemini 2.5" : source}
+              {source === "cached" ? "Cached analysis" : source === "gemini" ? "Gemini 3.5" : source}
             </span>
           </div>
           {SECTIONS.map((s) => (
