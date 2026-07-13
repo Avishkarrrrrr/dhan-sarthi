@@ -31,7 +31,8 @@ Wealth management and advisory remain **fragmented and inaccessible** to the mas
 ## Features
 
 - 🗣️ **Avatar-led voice + text conversation** (multilingual — English, Hindi, Tamil, Telugu, Marathi, Bengali)
-- 📊 **360° financial snapshot** — net worth, asset allocation, spending breakdown
+- 🏦 **Bank linking (mock Account Aggregator)** — a simulated bank login fetches savings/current/FD balances; add your own investments (equity, mutual funds, bonds, gold, cash equivalents) to build a live portfolio
+- 📊 **360° financial snapshot** — net worth, asset allocation, spending breakdown (recomputes live as you link accounts and add assets)
 - 🎯 **Goal planner & simulator** — live retirement / home / education projections
 - 🔔 **Proactive nudges** — emergency-fund, allocation-drift, top-spend insights
 - 🤖 **Strategy Studio** — ML-predicted algorithmic strategy from your inputs + **live Nifty technicals** (EMA/RSI/India-VIX), with a mock broker-connect & **simulated** automated execution
