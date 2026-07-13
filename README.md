@@ -36,6 +36,7 @@ Wealth management and advisory remain **fragmented and inaccessible** to the mas
 - 🔔 **Proactive nudges** — emergency-fund, allocation-drift, top-spend insights
 - 🤖 **Strategy Studio** — ML-predicted algorithmic strategy from your inputs + **live Nifty technicals** (EMA/RSI/India-VIX), with a mock broker-connect & **simulated** automated execution
 - 🔎 **Company Lens** — AI analysis of a company's latest **concall + investor presentation** into a 4-part insight (Quarter results · Risks · Projections · Verdict)
+- ⚖️ **MPT Optimizer** — Markowitz **efficient-frontier** optimization of your holdings (max Sharpe), with current-vs-optimal allocation and a simulated broker rebalance
 - 🛡️ **Compliance guardrails** — non-advice disclaimers, escalate-to-RM
 - 🌐 **Runs on free tiers** — Gemini + Sarvam ₹100 credits + Vercel ≈ **₹0**
 
@@ -47,6 +48,7 @@ Three of the team's earlier projects are folded in as add-on features:
 |---|---|
 | [`final_year_project`](https://github.com/Avishkarrrrrr/final_year_project) — RandomForest that predicts an algo-trading strategy from risk/return/amount + market technicals | **Strategy Studio**: the model's inputs + strategy taxonomy (EMA Crossover, VCP, Flag, Fibonacci, Resistance Breakout, 55-EMA Support, Bottom) ported to an explainable in-app engine over live Nifty data |
 | [`financial_statement_analyzer`](https://github.com/Avishkarrrrrr/financial_statement_analyzer) + [`concall_insights`](https://github.com/Avishkarrrrrr/concall_insights) — LLM analysis of concall transcripts & investor presentations | **Company Lens**: the 4-part structured analysis, run by Gemini over bundled real-company documents (live Screener.in scraping is the production path) |
+| [`Portfolio-Optimization`](https://github.com/hardik1vaibhav/Portfolio-Optimization) — Markowitz MPT max-Sharpe optimizer (SciPy) | **MPT Optimizer**: annualized returns/covariance + max-Sharpe (rf 7%) via Monte-Carlo efficient-frontier simulation over the user's asset classes |
 
 > **Note on trade execution:** Strategy Studio's automation is a clearly-labelled **simulation** against a mock broker — no real broker is connected and no real orders are placed. In production this maps to a broker-API integration behind explicit user authorisation and regulatory controls.
 
