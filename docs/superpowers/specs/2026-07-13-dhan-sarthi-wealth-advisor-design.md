@@ -18,7 +18,7 @@ Team: **Flexi Masters** · Team Leader: **Avishkar Varpe**
 
 1. An expressive **2D talking avatar** + voice conversation (accessible, trust-building, vernacular-ready).
 2. Advice **grounded on the customer's real 360° financial data** (portfolio holdings + spending/transaction patterns + goals), simulating an Account-Aggregator / core-banking feed.
-3. A **guardrailed LLM** (Claude) that reasons over that data to produce explainable, compliance-aware recommendations.
+3. A **guardrailed LLM** (Google Gemini 2.5 Flash) that reasons over that data to produce explainable, compliance-aware recommendations, spoken back in the customer's language via **Sarvam AI** Indian-language voice models.
 
 ## 3. USP / differentiation
 
@@ -43,45 +43,52 @@ Team: **Flexi Masters** · Team Leader: **Avishkar Varpe**
 
 ## 5. Architecture
 
-Single **Next.js (App Router)** full-stack app. The API routes act as a secure backend proxy that holds the Claude API key, so the key never reaches the browser. One repo, one deploy, one URL.
+Single **Next.js (App Router)** full-stack app. The API routes act as a secure backend proxy that holds the Gemini and Sarvam API keys, so no key ever reaches the browser. One repo, one deploy, one URL.
 
 ```
 ┌─────────────────────────────────────────────┐
 │  Mobile-framed React UI (phone frame)         │
-│   • Avatar (animated, lip/expression sync)    │
-│   • Voice in  → Web Speech STT                │
-│   • Voice out ← TTS → drives avatar mouth     │
+│   • Avatar (animated, mouth driven by audio)  │
+│   • Mic capture → /api/stt (Sarvam Saarika)   │
+│   • Voice out ← /api/tts (Sarvam Bulbul)      │
+│     audio amplitude → avatar lip-sync         │
 │   • Portfolio / spending charts (Recharts)    │
 └───────────────────┬───────────────────────────┘
-                    │ HTTPS (JSON)
+                    │ HTTPS (JSON / audio)
                     ▼
 ┌─────────────────────────────────────────────┐
 │  Next.js API routes  (secure backend proxy)   │
-│   /api/chat      → Claude (persona+guardrails)│
+│   /api/chat      → Gemini 2.5 Flash           │
+│   /api/stt       → Sarvam Saarika (STT)       │
+│   /api/tts       → Sarvam Bulbul (TTS)        │
 │   /api/profile   → customer 360 (mock)        │
 │   /api/simulate  → goal / retirement projection│
-│   holds ANTHROPIC_API_KEY (env var)           │
+│   holds GEMINI_API_KEY + SARVAM_API_KEY (env) │
 └───────────────────┬───────────────────────────┘
                     ▼
-    ┌──────────────┐     ┌──────────────────────┐
-    │  Claude LLM   │     │  Mock "bank data"     │
-    │  reasons over │◄────│  Account-Aggregator / │
-    │  profile JSON │     │  core-banking stand-in│
-    └──────────────┘     └──────────────────────┘
+ ┌───────────────┐  ┌──────────────┐  ┌───────────────────┐
+ │ Gemini 2.5    │  │ Sarvam AI     │  │ Mock "bank data"   │
+ │ Flash — brain │  │ Bulbul + Saarika│ Account-Aggregator/│
+ │ (swappable to │  │ voice (Indian │  │ core-banking       │
+ │  Sarvam-M)    │  │ languages)    │  │ stand-in           │
+ └───────────────┘  └──────────────┘  └───────────────────┘
 ```
 
-**Chat flow:** UI sends message + customer id → `/api/chat` injects the customer's financial JSON + advisor system prompt (persona, guardrails, and optional tool-use: `get_portfolio`, `get_spending_insights`, `run_simulation`) → Claude returns text (streamed) → UI renders text and speaks it via TTS, animating the avatar to the speech.
+**Chat flow:** mic audio → `/api/stt` (Sarvam Saarika) → transcript → `/api/chat` injects the customer's financial JSON + advisor system prompt (persona, guardrails, and optional tool-use: `get_portfolio`, `get_spending_insights`, `run_simulation`), Gemini replies in the selected language → `/api/tts` (Sarvam Bulbul) returns audio → UI plays it, using Web Audio amplitude to drive the avatar's mouth. Text is shown alongside. The LLM is behind a swappable provider interface (Gemini default, Sarvam-M optional).
 
 **Grounding strategy:** RAG-lite — the customer's structured 360° JSON is injected directly into the prompt context (small, bounded dataset). Tool-use lets Claude fetch simulations on demand.
 
 ## 6. Tech stack
 
 - **Next.js + TypeScript + Tailwind CSS** — app + secure API routes
-- **Framer Motion** — avatar animation (mouth/expression states synced to speech events)
-- **Web Speech API** — in-browser STT (mic) + TTS (voice out); zero external cost; graceful text-only fallback if unsupported
-- **Anthropic Claude** — server-side reasoning engine
+- **Framer Motion** — avatar animation (mouth/expression states driven by played-audio amplitude via Web Audio API)
+- **Google Gemini 2.5 Flash** — server-side reasoning engine (free tier; `gemini-2.5-flash-lite` auto-downgrade on rate limit; swappable to Sarvam-M)
+- **Sarvam AI** — Bulbul (TTS) + Saarika (STT) for Indian-language, Indian-accent voice; ₹100 free credits
+- **Web Speech API** — automatic fallback for STT/TTS if no Sarvam key is configured
 - **Recharts** — portfolio / spending / projection charts
 - **Vercel** — deployment (free tier), yields the shareable URL
+
+Estimated cost: effectively **₹0** for the prototype — Gemini free tier + Sarvam ₹100 free credits + Vercel free tier.
 
 ## 7. Data (synthetic)
 
@@ -89,7 +96,7 @@ A small set of synthetic customer profiles (e.g., "Priya, 32, salaried" / "Rajes
 
 ## 8. Resilience for the demo
 
-Real Claude is used when `ANTHROPIC_API_KEY` is set. If the key is missing or a call fails, `/api/chat` returns a curated, on-persona fallback response so the public demo link never hard-fails in front of judges. (User selected "real LLM via backend proxy"; this fallback is a safety net only, not a scripted-mode product.)
+Real Gemini is used when `GEMINI_API_KEY` is set. If the key is missing or a call fails, `/api/chat` returns a curated, on-persona fallback response. Similarly, if `SARVAM_API_KEY` is absent, the UI falls back to the browser Web Speech API for voice. So the public demo link never hard-fails in front of judges. (Fallbacks are safety nets only, not a scripted-mode product.)
 
 ## 9. Deliverables
 
@@ -99,7 +106,7 @@ Real Claude is used when `ANTHROPIC_API_KEY` is set. If the key is missing or a 
 
 ## 10. Security / handling constraints
 
-- **Claude API key**: read from `ANTHROPIC_API_KEY` env var; the user places it in a local `.env` (git-ignored). Never hardcoded or committed. `.env.example` documents the variable name only.
+- **API keys** (`GEMINI_API_KEY`, `SARVAM_API_KEY`): read from env vars; the user places them in a local `.env` (git-ignored). Never hardcoded or committed. `.env.example` documents the variable names only. All third-party calls are server-side so keys never reach the browser.
 - **GitHub**: published via the user's own authenticated `gh`/git on their machine (personal account). Claude never receives the user's GitHub password or token. Repo creation + push happens with explicit confirmation of name and public visibility.
 
 ## 11. Branding
@@ -110,6 +117,6 @@ IDBI-inspired green/teal palette to match the hackathon; bank references kept ge
 
 - Real Account Aggregator / core-banking integration (mocked).
 - Real authentication / KYC (a simple customer picker stands in).
-- 3D avatar and cloud TTS (2D + Web Speech is sufficient for the demo).
+- 3D avatar (2D animated avatar is sufficient for the demo).
 - Native mobile packaging (responsive web in a phone frame).
 - Real trade execution / money movement (advisory only — and out of ethical/regulatory bounds for a prototype).
