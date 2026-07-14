@@ -18,12 +18,19 @@ const BUNDLED_SYSTEM = `You are an equity research analyst for a bank's wealth-a
 const CUSTOM_SYSTEM = `You are an equity research analyst for a bank's wealth-advisory app. The user gives an NSE/BSE stock symbol or company name. Using the most recent quarterly results and earnings concall you are aware of, analyze it for a retail investor making a wealth decision.\n\n${JSON_SHAPE}`;
 
 function tryParse(text: string): CompanyAnalysis | null {
-  try {
-    const cleaned = text.replace(/```json|```/g, "").trim();
-    const obj = JSON.parse(cleaned);
-    if (obj.quarter && obj.risks && obj.projections && obj.verdict) return obj as CompanyAnalysis;
-  } catch {
-    /* ignore */
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  // Try direct parse, then extract the first {...} block if the model added prose.
+  const candidates = [cleaned];
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
+  if (first >= 0 && last > first) candidates.push(cleaned.slice(first, last + 1));
+  for (const c of candidates) {
+    try {
+      const obj = JSON.parse(c);
+      if (obj.quarter && obj.risks && obj.projections && obj.verdict) return obj as CompanyAnalysis;
+    } catch {
+      /* try next */
+    }
   }
   return null;
 }
@@ -53,6 +60,7 @@ export async function POST(req: NextRequest) {
       const text = await provider.complete(
         [{ role: "user", content: `Company: ${bundled.name} (${bundled.ticker}), ${bundled.latestPeriod}.\n\nDOCUMENT:\n${bundled.document}` }],
         BUNDLED_SYSTEM,
+        { json: true, maxTokens: 1000 },
       );
       const parsed = tryParse(text);
       return NextResponse.json({ analysis: parsed ?? bundled.cached, source: parsed ? provider.name : "cached", company: bundled.name });
@@ -79,11 +87,37 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const text = await provider.complete([{ role: "user", content: `Symbol/company: ${query}` }], CUSTOM_SYSTEM);
+    const text = await provider.complete([{ role: "user", content: `Symbol/company: ${query}` }], CUSTOM_SYSTEM, { json: true, maxTokens: 1000 });
     const parsed = tryParse(text);
     if (parsed) return NextResponse.json({ analysis: parsed, source: provider.name, company: query.toUpperCase() });
-    return NextResponse.json({ error: "Could not analyze that company. Try the exact symbol, e.g. TCS." }, { status: 502 });
+    // Retry once (transient formatting/latency), then degrade gracefully.
+    const retry = await provider.complete(
+      [{ role: "user", content: `Symbol/company: ${query}. Respond with ONLY the JSON object.` }],
+      CUSTOM_SYSTEM,
+      { json: true, maxTokens: 1000 },
+    );
+    const parsed2 = tryParse(retry);
+    if (parsed2) return NextResponse.json({ analysis: parsed2, source: provider.name, company: query.toUpperCase() });
+    return NextResponse.json({
+      analysis: {
+        quarter: `We couldn't fetch a reliable latest-quarter summary for "${query.toUpperCase()}" right now.`,
+        risks: "This can happen on free-tier rate limits or for lesser-known / mis-typed symbols.",
+        projections: "Please retry in a moment, or check the NSE symbol spelling.",
+        verdict: "Tip: the featured companies (TCS, INFY, RELIANCE, HDFCBANK) always work instantly.",
+      },
+      source: "unavailable",
+      company: query.toUpperCase(),
+    });
   } catch {
-    return NextResponse.json({ error: "Analysis service unavailable. Please retry." }, { status: 502 });
+    return NextResponse.json({
+      analysis: {
+        quarter: `The analysis service is busy for "${query.toUpperCase()}".`,
+        risks: "Likely a free-tier rate limit on the AI engine.",
+        projections: "Please retry in a few seconds.",
+        verdict: "Featured companies (TCS, INFY, RELIANCE, HDFCBANK) work instantly.",
+      },
+      source: "unavailable",
+      company: query.toUpperCase(),
+    });
   }
 }

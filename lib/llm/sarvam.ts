@@ -1,10 +1,10 @@
-import type { ChatMsg, LlmProvider } from "./provider";
+import type { ChatMsg, CompleteOpts, LlmProvider } from "./provider";
 
 /** Sarvam-M chat completions — optional "fully-sovereign stack" LLM. */
 export class SarvamProvider implements LlmProvider {
   name = "sarvam" as const;
 
-  async complete(messages: ChatMsg[], system: string): Promise<string> {
+  async complete(messages: ChatMsg[], system: string, opts: CompleteOpts = {}): Promise<string> {
     const apiKey = process.env.SARVAM_API_KEY;
     if (!apiKey) throw new Error("SARVAM_API_KEY not set");
 
@@ -18,7 +18,8 @@ export class SarvamProvider implements LlmProvider {
         model: "sarvam-m",
         messages: [{ role: "system", content: system }, ...messages],
         temperature: 0.6,
-        max_tokens: 500,
+        max_tokens: opts.maxTokens ?? 500,
+        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
       }),
     });
 

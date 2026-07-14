@@ -1,4 +1,4 @@
-import type { ChatMsg, LlmProvider } from "./provider";
+import type { ChatMsg, CompleteOpts, LlmProvider } from "./provider";
 
 /**
  * Deterministic, on-persona responses used when no LLM key is configured or a
@@ -9,7 +9,7 @@ import type { ChatMsg, LlmProvider } from "./provider";
 export class FallbackProvider implements LlmProvider {
   name = "fallback" as const;
 
-  async complete(messages: ChatMsg[], system: string): Promise<string> {
+  async complete(messages: ChatMsg[], system: string, _opts: CompleteOpts = {}): Promise<string> {
     const last = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
     const q = last.toLowerCase();
     const name = /Name:\s*([^,]+),/.exec(system)?.[1]?.trim().split(" ")[0] ?? "there";

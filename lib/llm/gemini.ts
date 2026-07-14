@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import type { ChatMsg, LlmProvider } from "./provider";
+import type { ChatMsg, CompleteOpts, LlmProvider } from "./provider";
 
 const PRIMARY = "gemini-3.5-flash";
 const FALLBACK_MODEL = "gemini-flash-lite-latest";
@@ -7,7 +7,7 @@ const FALLBACK_MODEL = "gemini-flash-lite-latest";
 export class GeminiProvider implements LlmProvider {
   name = "gemini" as const;
 
-  async complete(messages: ChatMsg[], system: string): Promise<string> {
+  async complete(messages: ChatMsg[], system: string, opts: CompleteOpts = {}): Promise<string> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY not set");
     const ai = new GoogleGenAI({ apiKey });
@@ -24,7 +24,8 @@ export class GeminiProvider implements LlmProvider {
         config: {
           systemInstruction: system,
           temperature: 0.6,
-          maxOutputTokens: 500,
+          maxOutputTokens: opts.maxTokens ?? 500,
+          ...(opts.json ? { responseMimeType: "application/json" } : {}),
         },
       });
 
