@@ -1,5 +1,4 @@
-import { selectRepository } from "@/lib/data/select";
-import type { CustomerRepository } from "@/lib/data/repository";
+import { selectSource } from "@/lib/integrations/source";
 import type { Customer } from "@/lib/data/types";
 import {
   allocation,
@@ -22,15 +21,24 @@ export interface ProfileResponse {
 }
 
 /**
+ * Anything that can resolve a customer by id. Both `CustomerRepository` and
+ * `FinancialDataSource` satisfy this, so the profile builder is not coupled to
+ * either one.
+ */
+export interface CustomerLookup {
+  getCustomer(id: string): Promise<Customer | undefined>;
+}
+
+/**
  * Compose the full 360° profile response. The derived figures stay pure and
- * unit-testable; only the customer fetch is I/O. `repo` is injectable so tests
- * and callers can pin a source instead of depending on ambient env.
+ * unit-testable; only the customer fetch is I/O. `source` is injectable so
+ * tests and callers can pin one instead of depending on ambient env.
  */
 export async function buildProfileResponse(
   id: string,
-  repo: CustomerRepository = selectRepository(),
+  source: CustomerLookup = selectSource(),
 ): Promise<ProfileResponse | null> {
-  const customer = await repo.getCustomer(id);
+  const customer = await source.getCustomer(id);
   if (!customer) return null;
   return {
     customer,

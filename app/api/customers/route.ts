@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { selectRepository } from "@/lib/data/select";
+import { selectSource } from "@/lib/integrations/source";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,7 @@ export const runtime = "nodejs";
  * /api/profile?id= returns the full 360° record for a chosen customer.
  */
 export async function GET() {
-  const repo = selectRepository();
+  const repo = selectSource();
   try {
     const customers = await repo.listCustomers();
     return NextResponse.json({ customers, source: repo.name });
@@ -18,8 +18,8 @@ export async function GET() {
     // A misconfigured or unreachable RDS must not blank the persona switcher.
     // Fall back to the bundled personas so the demo degrades rather than dies,
     // matching how the LLM and voice layers behave.
-    const { SyntheticRepository } = await import("@/lib/data/synthetic");
-    const fallback = new SyntheticRepository();
+    const { MockSource } = await import("@/lib/integrations/source");
+    const fallback = new MockSource();
     return NextResponse.json({
       customers: await fallback.listCustomers(),
       source: fallback.name,

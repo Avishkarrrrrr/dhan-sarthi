@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { selectRepository } from "@/lib/data/select";
+import { selectSource } from "@/lib/integrations/source";
 import { buildSystemPrompt } from "@/lib/llm/prompt";
 import { selectProvider } from "@/lib/llm/select";
 import { FallbackProvider } from "@/lib/llm/fallback";
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "customerId and messages are required" }, { status: 400 });
   }
 
-  const base = await selectRepository().getCustomer(customerId);
+  const base = await selectSource().getCustomer(customerId);
   if (!base) {
     return NextResponse.json({ error: "Unknown customer" }, { status: 404 });
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { selectRepository } from "@/lib/data/select";
+import { selectSource } from "@/lib/integrations/source";
 import { projectGoal, goalVerdict, retirementProjection } from "@/lib/finance/simulate";
 
 export const runtime = "nodejs";
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "mode, monthlyContribution, annualReturnPct required" }, { status: 400 });
   }
 
-  const customer = await selectRepository().getCustomer(customerId);
+  const customer = await selectSource().getCustomer(customerId);
   if (!customer) return NextResponse.json({ error: "Unknown customer" }, { status: 404 });
 
   if (mode === "goal") {
