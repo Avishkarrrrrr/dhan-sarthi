@@ -1,0 +1,113 @@
+{
+  "status": "block",
+  "violations": [
+    {
+      "rule": "suitability.growth_cap",
+      "detail": "100% in equity and mutual funds against a 65% ceiling for a moderate profile.",
+      "severity": "high"
+    },
+    {
+      "rule": "suitability.direct_equity_cap",
+      "detail": "70% in direct stocks against a 35% ceiling for a moderate profile. Single-stock risk is not diversified away.",
+      "severity": "high"
+    },
+    {
+      "rule": "suitability.defensive_floor",
+      "detail": "Only 0% in bonds, FD and cash against a 20% floor for a moderate profile.",
+      "severity": "high"
+    },
+    {
+      "rule": "concentration.single_class",
+      "detail": "70% in equity alone, against a 65% diversification cap.",
+      "severity": "med"
+    },
+    {
+      "rule": "liquidity.emergency_fund",
+      "detail": "Leaves 0.0 months of expenses liquid, against a 6-month buffer.",
+      "severity": "high"
+    },
+    {
+      "rule": "sebi.unrealistic_return",
+      "detail": "Projects 24% a year. Returns above 18% cannot be presented to a retail investor as achievable.",
+      "severity": "high"
+    },
+    {
+      "rule": "sebi.risk_understated",
+      "detail": "100% in growth assets described with 3% volatility. The stated risk does not match the portfolio.",
+      "severity": "med"
+    },
+    {
+      "rule": "guardrail.prohibited_language",
+      "detail": "Output contains \"guaranteed\" \u2014 guaranteed returns language cannot be used in investment advice.",
+      "severity": "high"
+    },
+    {
+      "rule": "guardrail.prohibited_language",
+      "detail": "Output contains \"double your money\" \u2014 double your money language cannot be used in investment advice.",
+      "severity": "high"
+    }
+  ],
+  "rewritten": {
+    "weights": {
+      "equity": 0.3499,
+      "mutual_fund": 0.3,
+      "bonds": 0.1167,
+      "fd": 0.1167,
+      "gold": 0,
+      "cash": 0.1167
+    },
+    "expectedReturnPct": 10.2,
+    "volatilityPct": 11.5,
+    "rationale": "Adjusted to stay within the suitability limits for a moderate investor: growth assets capped, defensive holdings and the emergency buffer restored. Original rationale: Go all-in on equities now \u2014 this is a guaranteed way to double your money before the home purchase.",
+    "contributingViews": [
+      "markets"
+    ]
+  },
+  "explanation": "Priya, I cannot recommend this. 100% in equity and mutual funds against a 65% ceiling for a moderate profile. 70% in direct stocks against a 35% ceiling for a moderate profile. Single-stock risk is not diversified away. Here is what I can recommend instead: 35% direct equity, 30% mutual funds, 12% bonds, 12% fixed deposits, 12% cash.",
+  "finalAllocation": {
+    "weights": {
+      "equity": 0.3499,
+      "mutual_fund": 0.3,
+      "bonds": 0.1167,
+      "fd": 0.1167,
+      "gold": 0,
+      "cash": 0.1167
+    },
+    "expectedReturnPct": 10.2,
+    "volatilityPct": 11.5,
+    "rationale": "Adjusted to stay within the suitability limits for a moderate investor: growth assets capped, defensive holdings and the emergency buffer restored. Original rationale: Go all-in on equities now \u2014 this is a guaranteed way to double your money before the home purchase.",
+    "contributingViews": [
+      "markets"
+    ]
+  },
+  "spokenText": "Priya, I cannot recommend this. 100% in equity and mutual funds against a 65% ceiling for a moderate profile. 70% in direct stocks against a 35% ceiling for a moderate profile. Single-stock risk is not diversified away. Here is what I can recommend instead: 35% direct equity, 30% mutual funds, 12% bonds, 12% fixed deposits, 12% cash.\n\nMutual fund and market investments are subject to market risks. Please read all scheme-related documents carefully.\n\nThis is an automated suitability assessment based on the information available to the bank, not a personal recommendation from a registered investment adviser.\n\nPast performance does not indicate future returns.",
+  "disclaimers": [
+    "Mutual fund and market investments are subject to market risks. Please read all scheme-related documents carefully.",
+    "This is an automated suitability assessment based on the information available to the bank, not a personal recommendation from a registered investment adviser.",
+    "Past performance does not indicate future returns."
+  ],
+  "ticket": {
+    "reason": "borderline",
+    "customerId": "priya",
+    "proposed": {
+      "weights": {
+        "equity": 0.7,
+        "mutual_fund": 0.3,
+        "bonds": 0,
+        "fd": 0,
+        "gold": 0,
+        "cash": 0
+      },
+      "expectedReturnPct": 24,
+      "volatilityPct": 3,
+      "rationale": "Go all-in on equities now \u2014 this is a guaranteed way to double your money before the home purchase.",
+      "contributingViews": [
+        "markets"
+      ]
+    },
+    "id": "ESC-1C136275",
+    "createdAt": "2026-09-19T16:36:46.011Z",
+    "status": "pending"
+  },
+  "auditId": "AUD-B27BCEE6"
+}

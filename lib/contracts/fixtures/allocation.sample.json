@@ -1,0 +1,7 @@
+{
+  "weights": { "equity": 0.15, "mutual_fund": 0.4, "bonds": 0.15, "fd": 0.15, "gold": 0.08, "cash": 0.07 },
+  "expectedReturnPct": 10.4,
+  "volatilityPct": 9.8,
+  "rationale": "Balanced growth tilt suited to a moderate profile with a five-year horizon, keeping a liquid buffer intact.",
+  "contributingViews": ["treasury", "markets", "bonds"]
+}

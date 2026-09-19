@@ -1,0 +1,153 @@
+{
+  "customer": {
+    "id": "priya",
+    "name": "Priya Patil",
+    "age": 31,
+    "persona": "Salaried IT professional, Pune",
+    "city": "Pune",
+    "monthlyIncome": 120000,
+    "riskProfile": "moderate",
+    "holdings": [
+      {
+        "assetClass": "equity",
+        "name": "Direct stocks (NSE)",
+        "value": 320000
+      },
+      {
+        "assetClass": "mutual_fund",
+        "name": "Nifty 50 Index Fund",
+        "value": 480000
+      },
+      {
+        "assetClass": "mutual_fund",
+        "name": "Flexi-cap Fund SIP",
+        "value": 260000
+      },
+      {
+        "assetClass": "fd",
+        "name": "Bank Fixed Deposit",
+        "value": 300000
+      },
+      {
+        "assetClass": "gold",
+        "name": "Sovereign Gold Bonds",
+        "value": 90000
+      },
+      {
+        "assetClass": "cash",
+        "name": "Savings account",
+        "value": 150000
+      }
+    ],
+    "transactions": [
+      {
+        "date": "2026-05-01",
+        "category": "Salary / Income",
+        "amount": 120000
+      },
+      {
+        "date": "2026-05-03",
+        "category": "Rent",
+        "amount": -32000
+      },
+      {
+        "date": "2026-05-05",
+        "category": "Groceries",
+        "amount": -12000
+      },
+      {
+        "date": "2026-05-07",
+        "category": "Dining / Food delivery",
+        "amount": -9500
+      },
+      {
+        "date": "2026-06-01",
+        "category": "Salary / Income",
+        "amount": 120000
+      },
+      {
+        "date": "2026-06-03",
+        "category": "Rent",
+        "amount": -32000
+      },
+      {
+        "date": "2026-06-05",
+        "category": "Groceries",
+        "amount": -12000
+      },
+      {
+        "date": "2026-06-07",
+        "category": "Dining / Food delivery",
+        "amount": -9500
+      }
+    ],
+    "goals": [
+      {
+        "id": "retirement",
+        "label": "Retirement",
+        "targetAmount": 30000000,
+        "targetYear": 2051,
+        "current": 800000
+      },
+      {
+        "id": "home",
+        "label": "Home down payment",
+        "targetAmount": 2500000,
+        "targetYear": 2031,
+        "current": 450000
+      }
+    ]
+  },
+  "netWorth": 1600000,
+  "allocationByClass": {
+    "equity": 0.2,
+    "mutual_fund": 0.4625,
+    "bonds": 0,
+    "fd": 0.1875,
+    "gold": 0.05625,
+    "cash": 0.09375
+  },
+  "xray": {
+    "byStock": [
+      {
+        "name": "HDFC Bank",
+        "weight": 0.08
+      },
+      {
+        "name": "Infosys",
+        "weight": 0.07
+      },
+      {
+        "name": "Reliance Industries",
+        "weight": 0.05
+      }
+    ],
+    "bySector": [],
+    "overlapPct": 0,
+    "concentrationFlags": []
+  },
+  "investableSurplus": 66500,
+  "ips": {
+    "monthlySip": 66500,
+    "annualStepUpPct": 10,
+    "horizonYears": 5,
+    "targetCorpus": 32500000,
+    "riskProfile": "moderate",
+    "goals": [
+      {
+        "id": "retirement",
+        "label": "Retirement",
+        "targetAmount": 30000000,
+        "targetYear": 2051,
+        "current": 800000
+      },
+      {
+        "id": "home",
+        "label": "Home down payment",
+        "targetAmount": 2500000,
+        "targetYear": 2031,
+        "current": 450000
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "weights": { "equity": 0.7, "mutual_fund": 0.3, "bonds": 0, "fd": 0, "gold": 0, "cash": 0 },
+  "expectedReturnPct": 24,
+  "volatilityPct": 3,
+  "rationale": "Go all-in on equities now — this is a guaranteed way to double your money before the home purchase.",
+  "contributingViews": ["markets"]
+}

@@ -154,3 +154,20 @@ export function rebalanceOrders(result: MptResult, netWorth: number): RebalanceO
     .filter((o) => o.amount > netWorth * 0.005)
     .sort((a, b) => b.amount - a.amount);
 }
+
+/**
+ * Expected return and volatility for an arbitrary set of class weights, under
+ * the same assumptions and correlations the optimizer uses. This lets the
+ * compliance layer restate the risk of an allocation it has rewritten, rather
+ * than carrying the original proposal's now-wrong numbers forward.
+ */
+export function weightedMetrics(
+  weights: Partial<Record<AssetClass, number>>,
+): PortfolioMetrics {
+  const classes = Object.keys(ASSUMPTIONS) as AssetClass[];
+  const w = classes.map((c) => weights[c] ?? 0);
+  const mu = classes.map((c) => ASSUMPTIONS[c].ret);
+  const vols = classes.map((c) => ASSUMPTIONS[c].vol);
+  const cov = classes.map((ci, i) => classes.map((cj, j) => CORR[ci][cj] * vols[i] * vols[j]));
+  return metrics(w, mu, cov);
+}
