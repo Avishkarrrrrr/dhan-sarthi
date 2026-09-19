@@ -1,14 +1,16 @@
-import { AnthropicBedrockMantle } from "@anthropic-ai/bedrock-sdk";
+import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import type { ChatMsg, CompleteOpts, LlmProvider } from "./provider";
 
 /**
  * Bedrock model id. On Bedrock, Anthropic ids carry an `anthropic.` prefix.
- * Some regions (ap-south-1 among them) only expose the newer Claude models
- * through a cross-region inference profile, in which case the id becomes
- * `global.anthropic.claude-sonnet-5`. Override with BEDROCK_MODEL_ID rather
- * than editing this — which form a region needs is an environment fact.
+ *
+ * The IDBI sandbox grants exactly one model — Claude 3 Haiku, by its direct
+ * foundation-model ARN. Newer models there are only reachable through
+ * cross-region inference profiles (`global.anthropic.…`), which the sandbox's
+ * IAM policy does not cover. Override with BEDROCK_MODEL_ID; which ids an
+ * account may invoke is an environment fact, not a code decision.
  */
-const DEFAULT_MODEL = "anthropic.claude-sonnet-5";
+const DEFAULT_MODEL = "anthropic.claude-3-haiku-20240307-v1:0";
 const DEFAULT_REGION = "ap-south-1";
 
 const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
@@ -42,7 +44,11 @@ export class BedrockProvider implements LlmProvider {
   async complete(messages: ChatMsg[], system: string, opts: CompleteOpts = {}): Promise<string> {
     const awsRegion = process.env.AWS_REGION || DEFAULT_REGION;
     const model = process.env.BEDROCK_MODEL_ID || DEFAULT_MODEL;
-    const client = new AnthropicBedrockMantle({ awsRegion });
+    // AnthropicBedrock targets bedrock-runtime InvokeModel, which is what the
+    // sandbox's IAM policy actually permits (it is scoped to the
+    // foundation-model ARN). The newer Mantle client routes differently and is
+    // not covered by that grant.
+    const client = new AnthropicBedrock({ awsRegion });
 
     const rawEffort = (process.env.BEDROCK_EFFORT || "").toLowerCase().trim();
     const effort = EFFORTS.includes(rawEffort as Effort) ? (rawEffort as Effort) : undefined;

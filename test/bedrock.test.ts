@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 const create = vi.fn();
 
 vi.mock("@anthropic-ai/bedrock-sdk", () => ({
-  AnthropicBedrockMantle: class {
+  AnthropicBedrock: class {
     config: unknown;
     messages = { create };
     constructor(config: unknown) {
@@ -45,14 +45,14 @@ describe("BedrockProvider", () => {
     expect(await new BedrockProvider().complete(msgs, "sys")).toBe("Hello Priya.");
   });
 
-  it("defaults to the anthropic-prefixed Sonnet id in ap-south-1", async () => {
+  it("defaults to the one model the IDBI sandbox permits", async () => {
     create.mockResolvedValue(ok("hi"));
     await new BedrockProvider().complete(msgs, "sys");
-    expect(create.mock.calls[0][0].model).toBe("anthropic.claude-sonnet-5");
+    expect(create.mock.calls[0][0].model).toBe("anthropic.claude-3-haiku-20240307-v1:0");
     expect(seen[0]).toEqual({ awsRegion: "ap-south-1" });
   });
 
-  it("honours BEDROCK_MODEL_ID for cross-region inference profiles", async () => {
+  it("honours BEDROCK_MODEL_ID for a different model or profile", async () => {
     process.env.BEDROCK_MODEL_ID = "global.anthropic.claude-sonnet-5";
     create.mockResolvedValue(ok("hi"));
     await new BedrockProvider().complete(msgs, "sys");
