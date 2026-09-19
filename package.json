@@ -14,9 +14,11 @@
   "author": "Flexi Masters",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/bedrock-sdk": "^0.33.4",
     "@google/genai": "^2.11.0",
     "framer-motion": "^12.42.2",
     "next": "^15.5.20",
+    "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.9.2"
@@ -25,6 +27,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.1",
+    "@types/pg": "^8.23.1",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.3",

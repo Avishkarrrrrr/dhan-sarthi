@@ -8,6 +8,6 @@ export interface CompleteOpts {
 }
 
 export interface LlmProvider {
-  name: "gemini" | "sarvam" | "fallback";
+  name: "bedrock" | "gemini" | "sarvam" | "fallback";
   complete(messages: ChatMsg[], system: string, opts?: CompleteOpts): Promise<string>;
 }

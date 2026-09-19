@@ -1,4 +1,5 @@
-import { getCustomer } from "@/lib/data/customers";
+import { selectRepository } from "@/lib/data/select";
+import type { CustomerRepository } from "@/lib/data/repository";
 import type { Customer } from "@/lib/data/types";
 import {
   allocation,
@@ -20,9 +21,16 @@ export interface ProfileResponse {
   nudges: Nudge[];
 }
 
-/** Compose the full 360° profile response. Pure and unit-testable. */
-export function buildProfileResponse(id: string): ProfileResponse | null {
-  const customer = getCustomer(id);
+/**
+ * Compose the full 360° profile response. The derived figures stay pure and
+ * unit-testable; only the customer fetch is I/O. `repo` is injectable so tests
+ * and callers can pin a source instead of depending on ambient env.
+ */
+export async function buildProfileResponse(
+  id: string,
+  repo: CustomerRepository = selectRepository(),
+): Promise<ProfileResponse | null> {
+  const customer = await repo.getCustomer(id);
   if (!customer) return null;
   return {
     customer,

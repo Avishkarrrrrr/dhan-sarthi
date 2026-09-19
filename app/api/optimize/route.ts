@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCustomer } from "@/lib/data/customers";
+import { selectRepository } from "@/lib/data/select";
 import { optimizePortfolio } from "@/lib/finance/mpt";
 import { netWorth } from "@/lib/finance/metrics";
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const customer = getCustomer(body.customerId ?? "");
+  const customer = await selectRepository().getCustomer(body.customerId ?? "");
   if (!customer) return NextResponse.json({ error: "Unknown customer" }, { status: 404 });
 
   const result = optimizePortfolio(customer);

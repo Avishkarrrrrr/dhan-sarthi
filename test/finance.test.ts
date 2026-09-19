@@ -68,11 +68,11 @@ describe("simulate", () => {
 });
 
 describe("profile builder", () => {
-  it("returns null for unknown id", () => {
-    expect(buildProfileResponse("nobody")).toBeNull();
+  it("returns null for unknown id", async () => {
+    expect(await buildProfileResponse("nobody")).toBeNull();
   });
-  it("includes netWorth and nudges for a known id", () => {
-    const p = buildProfileResponse("priya")!;
+  it("includes netWorth and nudges for a known id", async () => {
+    const p = (await buildProfileResponse("priya"))!;
     expect(p.netWorth).toBeGreaterThan(0);
     expect(p.nudges.length).toBeGreaterThan(0);
     expect(p.allocation.length).toBeGreaterThan(0);

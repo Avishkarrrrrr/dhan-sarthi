@@ -10,6 +10,7 @@ describe("provider selection", () => {
     delete process.env.GEMINI_API_KEY;
     delete process.env.SARVAM_API_KEY;
     delete process.env.LLM_PROVIDER;
+    delete process.env.BEDROCK_MODEL_ID;
   });
   afterEach(() => {
     process.env = { ...saved };
@@ -28,6 +29,27 @@ describe("provider selection", () => {
   it("selects gemini when key present", () => {
     process.env.GEMINI_API_KEY = "x";
     expect(selectProvider().name).toBe("gemini");
+  });
+
+  it("selects bedrock when forced", () => {
+    process.env.LLM_PROVIDER = "bedrock";
+    expect(selectProvider().name).toBe("bedrock");
+  });
+
+  it("selects bedrock when BEDROCK_MODEL_ID is set", () => {
+    process.env.BEDROCK_MODEL_ID = "anthropic.claude-sonnet-5";
+    expect(selectProvider().name).toBe("bedrock");
+  });
+
+  it("prefers bedrock over a gemini key once bedrock is opted into", () => {
+    process.env.GEMINI_API_KEY = "x";
+    process.env.BEDROCK_MODEL_ID = "anthropic.claude-sonnet-5";
+    expect(selectProvider().name).toBe("bedrock");
+  });
+
+  it("does not select bedrock from AWS_REGION alone", () => {
+    process.env.AWS_REGION = "ap-south-1";
+    expect(selectProvider().name).toBe("fallback");
   });
 });
 
