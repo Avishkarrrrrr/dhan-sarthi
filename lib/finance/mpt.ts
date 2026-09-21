@@ -1,5 +1,7 @@
 import type { AssetClass, Customer } from "@/lib/data/types";
 import { ASSET_LABELS } from "@/lib/format";
+import { ASSET_CLASSES, type AgentView } from "@/lib/contracts/types";
+import { impliedReturns, posteriorReturns, viewsFromAgents } from "./blacklitterman";
 
 /**
  * Modern Portfolio Theory (Markowitz) optimizer — ported from the reference
@@ -97,7 +99,17 @@ function randomWeights(n: number): number[] {
   return eq;
 }
 
-export function optimizePortfolio(customer: Customer): MptResult {
+/**
+ * Optimise, optionally through the committee's eyes.
+ *
+ * With no views this is plain Markowitz on the house return assumptions. With
+ * views it becomes Black-Litterman: the return vector is replaced by a
+ * posterior that starts from what the customer's own holdings imply and is
+ * moved by each desk in proportion to how sure that desk is. The frontier and
+ * the Sharpe search are unchanged — only what the optimiser believes about
+ * returns differs, which is exactly the separation Black-Litterman is for.
+ */
+export function optimizePortfolio(customer: Customer, views?: AgentView[]): MptResult {
   // Aggregate current holdings by asset class.
   const byClass = new Map<AssetClass, number>();
   for (const h of customer.holdings) byClass.set(h.assetClass, (byClass.get(h.assetClass) ?? 0) + h.value);
@@ -105,9 +117,29 @@ export function optimizePortfolio(customer: Customer): MptResult {
   const total = [...byClass.values()].reduce((s, v) => s + v, 0) || 1;
   const currentWeights = classes.map((c) => (byClass.get(c) ?? 0) / total);
 
-  const mu = classes.map((c) => ASSUMPTIONS[c].ret);
   const vols = classes.map((c) => ASSUMPTIONS[c].vol);
   const cov = classes.map((ci, i) => classes.map((cj, j) => CORR[ci][cj] * vols[i] * vols[j]));
+
+  /*
+   * Returns. House assumptions when nobody has a view; otherwise the
+   * Black-Litterman posterior, anchored on what the customer's current
+   * holdings imply the market expects rather than on our own point estimates.
+   */
+  let mu = classes.map((c) => ASSUMPTIONS[c].ret);
+  if (views?.length) {
+    const pi = impliedReturns(cov, currentWeights);
+    // `viewsFromAgents` indexes by the full ASSET_CLASSES order; this customer
+    // may hold only some, so views on classes they do not hold are dropped
+    // rather than silently applied to whichever class happens to sit there.
+    const indexOf = new Map(classes.map((c, i) => [c, i]));
+    const mapped = viewsFromAgents(views, ASSET_CLASSES.map((c) => {
+      const i = indexOf.get(c);
+      return i === undefined ? 0 : pi[i];
+    }))
+      .map((v) => ({ ...v, asset: indexOf.get(ASSET_CLASSES[v.asset]) ?? -1 }))
+      .filter((v) => v.asset >= 0);
+    mu = posteriorReturns(cov, pi, mapped);
+  }
 
   const n = classes.length;
   let best = { w: currentWeights, m: metrics(currentWeights, mu, cov) };
