@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Avatar, type Mood } from "./Avatar";
+import { type Mood } from "./Avatar";
+import { AdvisorAvatar } from "./AdvisorAvatar";
 import { useVoice } from "@/lib/client/useVoice";
 import { postChat } from "@/lib/client/api";
 import type { ChatMsg } from "@/lib/llm/provider";
@@ -104,13 +105,26 @@ export function ChatPanel({
   return (
     <div className="flex h-full flex-col">
       {/* Avatar stage */}
-      <div className="flex flex-col items-center bg-gradient-to-b from-brand-light to-white px-4 pb-3 pt-5">
-        <Avatar speaking={isSpeaking} amplitude={amplitude} mood={mood} size={150} />
+      <div className="relative flex flex-col items-center overflow-hidden bg-gradient-to-b from-brand-light to-white px-4 pb-3 pt-5">
+        {/* Soft stage light behind the advisor */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-2 h-40 w-40 -translate-x-1/2 rounded-full bg-brand-accent/20 blur-3xl"
+        />
+        <div className="relative">
+          <AdvisorAvatar speaking={isSpeaking} amplitude={amplitude} mood={mood} size={168} />
+        </div>
         <div className="mt-1 flex items-center gap-2">
           <span className="text-sm font-semibold text-brand-deep">Dhan Sarthi</span>
           {provider && (
             <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green">
-              {provider === "gemini" ? "Gemini 3.5" : provider === "sarvam" ? "Sarvam-M" : "Guided"}
+              {provider === "bedrock"
+                ? "Claude · IDBI Bedrock"
+                : provider === "gemini"
+                  ? "Gemini"
+                  : provider === "sarvam"
+                    ? "Sarvam-M"
+                    : "Guided"}
             </span>
           )}
         </div>

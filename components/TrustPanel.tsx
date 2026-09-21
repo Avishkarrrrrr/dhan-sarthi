@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { AssetClass } from "@/lib/data/types";
 import type { Allocation, Severity, Violation } from "@/lib/contracts/types";
 import { postCompliance, type ComplianceResponse } from "@/lib/client/api";
-import { CommitteePanel } from "./CommitteePanel";
+import { CommitteeRoom } from "./CommitteeRoom";
 import { ASSET_LABELS } from "@/lib/format";
 
 /**
@@ -108,7 +108,7 @@ export function TrustPanel({ customerId }: { customerId: string }) {
         </p>
       </header>
 
-      <CommitteePanel customerId={customerId} />
+      <CommitteeRoom customerId={customerId} />
 
       {/* Adversarial proposals, to show the checks bite */}
       <section className="rounded-2xl border border-brand-light bg-white p-4 shadow-soft">

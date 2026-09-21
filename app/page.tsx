@@ -119,7 +119,7 @@ export default function Home() {
 
       <PhoneFrame>
         {/* App header */}
-        <header className="flex items-center justify-between bg-brand-deep px-4 pb-3 pt-8 text-white">
+        <header className="z-20 flex shrink-0 items-center justify-between bg-brand-deep px-4 pb-3 pt-8 text-white">
           <div>
             <p className="text-[11px] text-white/60">Good day,</p>
             <p className="text-base font-semibold leading-tight">{firstName}</p>

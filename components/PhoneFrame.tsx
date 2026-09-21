@@ -9,7 +9,12 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
       <div className="relative h-[820px] max-h-[92vh] overflow-hidden rounded-[2.75rem] border-[10px] border-neutral-900 bg-white shadow-phone">
         {/* notch */}
         <div className="pointer-events-none absolute left-1/2 top-0 z-30 h-6 w-36 -translate-x-1/2 rounded-b-2xl bg-neutral-900" />
-        <div className="phone-scroll flex h-full flex-col overflow-y-auto">{children}</div>
+        {/*
+          `overflow-hidden`, not `auto`: every screen panel scrolls itself, and
+          two nested scrollers meant clicking anything inside one scrolled it
+          independently of the frame — which silently hid panel headings.
+        */}
+        <div className="flex h-full flex-col overflow-hidden">{children}</div>
       </div>
     </div>
   );
