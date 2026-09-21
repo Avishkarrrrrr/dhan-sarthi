@@ -41,6 +41,39 @@ function textOf(res: { content: Array<{ type: string }> }): string {
 export class BedrockProvider implements LlmProvider {
   name = "bedrock" as const;
 
+  /**
+   * Stream the reply as Claude produces it.
+   *
+   * Worth the extra path: the first words reach the customer in a few hundred
+   * milliseconds instead of after the whole answer, and the avatar can start
+   * speaking a sentence while the rest is still being written.
+   */
+  async *stream(
+    messages: ChatMsg[],
+    system: string,
+    opts: CompleteOpts = {},
+  ): AsyncIterable<string> {
+    const client = new AnthropicBedrock({ awsRegion: process.env.AWS_REGION || DEFAULT_REGION });
+    const model = process.env.BEDROCK_MODEL_ID || DEFAULT_MODEL;
+
+    const s = client.messages.stream({
+      model,
+      max_tokens: opts.maxTokens ?? 500,
+      system: opts.json ? system + JSON_NUDGE : system,
+      messages,
+    });
+
+    for await (const event of s) {
+      if (
+        event.type === "content_block_delta" &&
+        "delta" in event &&
+        event.delta.type === "text_delta"
+      ) {
+        yield event.delta.text;
+      }
+    }
+  }
+
   async complete(messages: ChatMsg[], system: string, opts: CompleteOpts = {}): Promise<string> {
     const awsRegion = process.env.AWS_REGION || DEFAULT_REGION;
     const model = process.env.BEDROCK_MODEL_ID || DEFAULT_MODEL;

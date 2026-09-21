@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type Mood } from "./Avatar";
 import { AdvisorAvatar } from "./AdvisorAvatar";
 import { useVoice } from "@/lib/client/useVoice";
-import { postChat } from "@/lib/client/api";
+import { streamChat } from "@/lib/client/api";
 import type { ChatMsg } from "@/lib/llm/provider";
 
 const LANGUAGES: { code: string; label: string }[] = [
@@ -74,11 +74,31 @@ export function ChatPanel({
       setMessages(next);
       setInput("");
       setThinking(true);
+      // Placeholder the reply streams into, so the bubble appears immediately
+      // and fills rather than the screen sitting empty until the answer lands.
+      setMessages([...next, { role: "assistant", content: "" }]);
+
+      let full = "";
       try {
-        const { reply, provider: p } = await postChat(customerId, next, language, holdings);
-        setProvider(p);
-        setMessages([...next, { role: "assistant", content: reply }]);
-        if (voiceOut) void speak(reply, language);
+        await streamChat(
+          { customerId, messages: next, language, holdings },
+          (delta) => {
+            full += delta;
+            // Only the last message changes; rewriting it in place keeps the
+            // whole transcript from re-rendering on every token.
+            setMessages((prev) => {
+              const out = prev.slice();
+              out[out.length - 1] = { role: "assistant", content: full };
+              return out;
+            });
+            setThinking(false);
+          },
+          (p) => setProvider(p),
+        );
+        if (!full.trim()) throw new Error("Empty reply");
+        // Spoken after the text completes: Bulbul needs whole sentences to get
+        // the prosody right, and speaking fragments sounds worse than waiting.
+        if (voiceOut) void speak(full, language);
       } catch {
         setMessages([
           ...next,

@@ -16,6 +16,64 @@ export async function fetchProfile(id: string): Promise<ProfileResponse> {
   return res.json();
 }
 
+/**
+ * Stream a reply, calling `onDelta` for each piece of text as it arrives.
+ *
+ * Same newline-delimited framing as the committee: lines can be split across
+ * network chunks, so the tail is held back until a newline actually lands.
+ * Parsing per-chunk silently drops text under any real connection.
+ */
+export async function streamChat(
+  params: {
+    customerId: string;
+    messages: ChatMsg[];
+    language: string;
+    holdings?: import("@/lib/data/types").Holding[];
+  },
+  onDelta: (text: string) => void,
+  onMeta?: (provider: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...params, stream: true }),
+    signal,
+  });
+  if (!res.ok || !res.body) throw new Error(`chat ${res.status}`);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  const handle = (raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    try {
+      const e = JSON.parse(text) as
+        | { type: "meta"; provider: string }
+        | { type: "delta"; text: string }
+        | { type: "error"; message: string }
+        | { type: "done" };
+      if (e.type === "delta") onDelta(e.text);
+      else if (e.type === "meta") onMeta?.(e.provider);
+      else if (e.type === "error") throw new Error(e.message);
+    } catch {
+      // A malformed line must not abandon the rest of the answer.
+    }
+  };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    lines.forEach(handle);
+  }
+  handle(buffer);
+}
+
 export async function postChat(
   customerId: string,
   messages: ChatMsg[],

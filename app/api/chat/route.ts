@@ -13,6 +13,8 @@ interface ChatBody {
   messages: ChatMsg[];
   language?: string;
   holdings?: Holding[];
+  /** Stream the reply as it is generated rather than waiting for all of it. */
+  stream?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -38,6 +40,8 @@ export async function POST(req: NextRequest) {
   const system = buildSystemPrompt(customer, language);
   const provider = selectProvider();
 
+  if (body.stream) return streamReply(provider, messages, system);
+
   try {
     const reply = await provider.complete(messages, system);
     if (!reply) throw new Error("Empty reply");
@@ -48,4 +52,66 @@ export async function POST(req: NextRequest) {
     const reply = await new FallbackProvider().complete(messages, system);
     return NextResponse.json({ reply, provider: "fallback" });
   }
+}
+
+/**
+ * Stream the answer as newline-delimited JSON.
+ *
+ * The provider name is sent first so the UI can label the answer before any
+ * text arrives, and errors are reported in-band — once the response has begun
+ * there is no status code left to fail with, and a stream that simply stops
+ * is indistinguishable from a slow one.
+ */
+function streamReply(
+  provider: ReturnType<typeof selectProvider>,
+  messages: ChatMsg[],
+  system: string,
+): Response {
+  const encoder = new TextEncoder();
+  const line = (o: unknown) => encoder.encode(`${JSON.stringify(o)}\n`);
+
+  const body = new ReadableStream({
+    async start(controller) {
+      let produced = false;
+      try {
+        controller.enqueue(line({ type: "meta", provider: provider.name }));
+
+        if (provider.stream) {
+          for await (const delta of provider.stream(messages, system)) {
+            if (!delta) continue;
+            produced = true;
+            controller.enqueue(line({ type: "delta", text: delta }));
+          }
+        }
+
+        // No streaming support, or a stream that yielded nothing: fall back to
+        // a single complete() and send it as one chunk rather than pretending.
+        if (!produced) {
+          const reply = await provider.complete(messages, system);
+          if (!reply) throw new Error("Empty reply");
+          controller.enqueue(line({ type: "delta", text: reply }));
+        }
+      } catch (err) {
+        console.error("chat stream error, using fallback:", err);
+        try {
+          const reply = await new FallbackProvider().complete(messages, system);
+          controller.enqueue(line({ type: "meta", provider: "fallback" }));
+          controller.enqueue(line({ type: "delta", text: reply }));
+        } catch {
+          controller.enqueue(line({ type: "error", message: "Could not reach the advisor." }));
+        }
+      } finally {
+        controller.enqueue(line({ type: "done" }));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(body, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }
