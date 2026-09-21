@@ -72,11 +72,17 @@ export function rewriteAllocation(
   return rewritten;
 }
 
-/** The liquid weight needed to keep a 6-month buffer, as a fraction of net worth. */
+/**
+ * The liquid weight needed to keep a 6-month buffer, as a fraction of net
+ * worth. Returns 0 when the buffer is out of reach at any allocation — forcing
+ * everything liquid would not achieve it and would wreck diversification
+ * trying; see the matching carve-out in the emergency-fund rule.
+ */
 function liquidityFloor(s: FinancialSnapshot): number {
   const monthly = monthlyExpenses(s.customer);
   if (monthly <= 0 || s.netWorth <= 0) return 0;
-  return Math.min(1, (monthly * EMERGENCY_MONTHS) / s.netWorth);
+  const needed = (monthly * EMERGENCY_MONTHS) / s.netWorth;
+  return needed > 1 ? 0 : needed;
 }
 
 /** Drop NaNs and negatives — a rewrite starts from something well-formed. */
@@ -158,14 +164,44 @@ function park(w: Weights, amount: number, exclude: readonly AssetClass[]): Weigh
   return add(w, amount, targets.length ? targets : DEFENSIVE_SINK);
 }
 
-/** Distribute `amount` across targets pro-rata, or evenly if all are empty. */
+/**
+ * Distribute `amount` across targets, pro-rata but never past the
+ * single-class cap.
+ *
+ * A plain pro-rata split re-breaches the caps that ran earlier: raising the
+ * liquidity floor for a customer whose net worth is under six months of
+ * expenses pushes nearly everything into whichever liquid class was already
+ * largest, and that class then exceeds the concentration limit. Filling the
+ * class with the most headroom first keeps the result inside both rules, which
+ * is what makes a compliant alternative offerable at all.
+ */
 function add(w: Weights, amount: number, targets: readonly AssetClass[]): Weights {
   if (amount <= 0 || !targets.length) return w;
   const out = { ...w };
+  let left = amount;
+
+  // Pro-rata first, clipped at the cap.
   const base = sumOf(w, targets);
   for (const c of targets) {
-    out[c] += base > 0 ? amount * (w[c] / base) : amount / targets.length;
+    const share = base > 0 ? amount * (w[c] / base) : amount / targets.length;
+    const room = Math.max(0, MAX_SINGLE_CLASS - out[c]);
+    const give = Math.min(share, room, left);
+    out[c] += give;
+    left -= give;
   }
+
+  // Whatever the caps refused, pour into remaining headroom, largest first.
+  while (left > 1e-9) {
+    const open = targets
+      .filter((c) => out[c] < MAX_SINGLE_CLASS - 1e-9)
+      .sort((a, b) => MAX_SINGLE_CLASS - out[b] - (MAX_SINGLE_CLASS - out[a]));
+    if (!open.length) break; // Genuinely cannot place it; the caller re-checks.
+    const c = open[0];
+    const give = Math.min(left, MAX_SINGLE_CLASS - out[c]);
+    out[c] += give;
+    left -= give;
+  }
+
   return out;
 }
 

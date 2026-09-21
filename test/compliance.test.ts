@@ -7,7 +7,7 @@ import { evaluate, run } from "@/lib/compliance/pipeline";
 import { checkText, redactText, ensureDisclaimers } from "@/lib/compliance/guardrails";
 import { rewriteAllocation } from "@/lib/compliance/rewrite";
 import { ASSET_CLASSES, GROWTH_CLASSES, sumOf } from "@/lib/contracts/types";
-import { RISK_BANDS, MAX_CREDIBLE_RETURN_PCT } from "@/lib/compliance/policy";
+import { RISK_BANDS, MAX_CREDIBLE_RETURN_PCT, MAX_SINGLE_CLASS } from "@/lib/compliance/policy";
 import * as audit from "@/lib/audit/log";
 import * as queue from "@/lib/hitl/queue";
 
@@ -203,6 +203,36 @@ describe("rounding", () => {
     const fixed = rewriteAllocation(bad, snapshot)!;
     expect(fixed.weights.equity).toBeLessThanOrEqual(RISK_BANDS.moderate.maxDirectEquity);
     expect(sumOf(fixed.weights, GROWTH_CLASSES)).toBeLessThanOrEqual(RISK_BANDS.moderate.maxGrowth);
+    expect(sum(fixed)).toBe(1);
+  });
+});
+
+describe("a customer whose whole net worth is under the emergency buffer", () => {
+  // Priya's live position: Rs 65,780 against roughly Rs 50,000 a month of
+  // spending. Six months liquid is more than she owns, so the liquidity floor
+  // demands ~100% liquid — which a naive pro-rata split turns into an 85% cash
+  // concentration, breaching the diversification cap and leaving the customer
+  // with a refusal and no alternative.
+  const tight = clone(snapshot);
+  tight.netWorth = 65780;
+  tight.customer.holdings = [
+    { assetClass: "cash", name: "IDBI Savings Account", value: 55780 },
+    { assetClass: "fd", name: "IDBI Fixed Deposit", value: 10000 },
+  ];
+  tight.xray = { byStock: [], bySector: [], overlapPct: 0, concentrationFlags: [] };
+
+  it("still offers a compliant alternative rather than giving up", () => {
+    const verdict = evaluate(bad, tight, bad.rationale);
+    expect(verdict.status).toBe("block");
+    expect(verdict.rewritten).toBeDefined();
+    expect(verdict.explanation).toMatch(/recommend instead/i);
+  });
+
+  it("keeps the alternative inside the concentration cap", () => {
+    const fixed = rewriteAllocation(bad, tight)!;
+    for (const c of ASSET_CLASSES) {
+      expect(fixed.weights[c]).toBeLessThanOrEqual(MAX_SINGLE_CLASS + 1e-6);
+    }
     expect(sum(fixed)).toBe(1);
   });
 });

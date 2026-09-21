@@ -8,6 +8,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { GoalPlanner } from "@/components/GoalPlanner";
 import { StrategyStudio } from "@/components/StrategyStudio";
 import { CompanyLens } from "@/components/CompanyLens";
+import { TrustPanel } from "@/components/TrustPanel";
 import { fetchCustomers, fetchProfile } from "@/lib/client/api";
 import type { Customer, CustomerSummary, Holding } from "@/lib/data/types";
 
@@ -166,6 +167,7 @@ export default function Home() {
                 onAskAdvisor={askAdvisor}
               />
             )}
+            {screen === "trust" && <TrustPanel customerId={customerId} />}
             {screen === "planner" && <GoalPlanner customerId={customerId} onAskAdvisor={askAdvisor} />}
             {screen === "strategy" && <StrategyStudio onAskAdvisor={askAdvisor} />}
             {screen === "lens" && <CompanyLens onAskAdvisor={askAdvisor} />}

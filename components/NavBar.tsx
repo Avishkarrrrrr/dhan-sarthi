@@ -1,6 +1,6 @@
 "use client";
 
-export type Screen = "advisor" | "dashboard" | "planner" | "strategy" | "lens";
+export type Screen = "advisor" | "dashboard" | "trust" | "planner" | "strategy" | "lens";
 
 const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
   {
@@ -14,6 +14,13 @@ const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
     id: "dashboard",
     label: "Portfolio",
     icon: <path d="M4 13h4v7H4v-7Zm6-6h4v13h-4V7Zm6 3h4v10h-4V10Z" />,
+  },
+  {
+    id: "trust",
+    label: "Trust",
+    // A shield: the suitability layer is the thing standing between the
+    // customer and an unsuitable recommendation.
+    icon: <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm0 5.5 4 1.5v2.8c0 3-1.7 5.7-4 6.8-2.3-1.1-4-3.8-4-6.8V9l4-1.5Z" />,
   },
   {
     id: "planner",
@@ -44,7 +51,7 @@ export function NavBar({
   onChange: (s: Screen) => void;
 }) {
   return (
-    <nav className="sticky bottom-0 z-20 mt-auto grid grid-cols-5 border-t border-brand-light bg-white/95 backdrop-blur">
+    <nav className="sticky bottom-0 z-20 mt-auto grid grid-cols-6 border-t border-brand-light bg-white/95 backdrop-blur">
       {TABS.map((t) => {
         const on = active === t.id;
         return (

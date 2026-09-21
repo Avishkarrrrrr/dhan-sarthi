@@ -238,10 +238,29 @@ const singleStockCap: Rule = (_a, s) => {
  * Emergency fund. Measured on the proposed allocation applied to today's net
  * worth, because a plan that funds itself by spending the buffer is unsuitable
  * however good the arithmetic looks.
+ *
+ * With one important exception: when the customer's entire net worth is less
+ * than the buffer, no allocation can satisfy this. Treating that as a defect
+ * blocks every proposal for them — including perfectly suitable ones — and
+ * offers no way out, because reallocation cannot create savings that do not
+ * exist. In that case it is recorded as advice to build the buffer, not as a
+ * reason to refuse the plan.
  */
 const emergencyFund: Rule = (a, s) => {
   const monthly = monthlyExpenses(s.customer);
   if (monthly <= 0 || s.netWorth <= 0) return [];
+
+  const achievableMonths = s.netWorth / monthly;
+  if (achievableMonths < EMERGENCY_MONTHS) {
+    return [
+      {
+        rule: "liquidity.buffer_below_target",
+        detail: `Total savings cover ${achievableMonths.toFixed(1)} months of expenses, short of the ${EMERGENCY_MONTHS}-month buffer. Building it up matters more than the mix right now.`,
+        severity: "low",
+      },
+    ];
+  }
+
   const liquid = sumOf(a.weights, LIQUID_CLASSES) * s.netWorth;
   const months = liquid / monthly;
   if (months >= EMERGENCY_MONTHS) return [];
