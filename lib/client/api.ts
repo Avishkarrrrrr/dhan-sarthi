@@ -8,7 +8,7 @@ import type { CompanyAnalysis } from "@/lib/research/companies";
 import type { MptResult } from "@/lib/finance/mpt";
 import type { CustomerSummary, Transaction } from "@/lib/data/types";
 import type { JourneyStep, KycProfile } from "@/lib/integrations/aa";
-import type { ComplianceVerdict, Allocation, EscalationTicket } from "@/lib/contracts/types";
+import type { AuditEntry, ComplianceVerdict, Allocation, EscalationTicket } from "@/lib/contracts/types";
 
 export async function fetchProfile(id: string): Promise<ProfileResponse> {
   const res = await fetch(`/api/profile?id=${encodeURIComponent(id)}`);
@@ -176,5 +176,38 @@ export async function postCompliance(params: {
     const msg = await res.json().catch(() => ({}));
     throw new Error(msg.error || `compliance ${res.status}`);
   }
+  return res.json();
+}
+
+/** Pending escalations waiting on a relationship manager. */
+export async function fetchRmQueue(status?: EscalationTicket["status"]): Promise<EscalationTicket[]> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  const res = await fetch(`/api/rm/queue${qs}`);
+  if (!res.ok) throw new Error(`rm queue ${res.status}`);
+  return res.json();
+}
+
+/** Record the relationship manager's decision on one escalation. */
+export async function postRmDecision(
+  ticketId: string,
+  decision: "approved" | "modified" | "rejected",
+  modified?: Allocation,
+): Promise<EscalationTicket> {
+  const res = await fetch("/api/rm/decide", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticketId, decision, modified }),
+  });
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({}));
+    throw new Error(msg.error || `rm decide ${res.status}`);
+  }
+  return res.json();
+}
+
+/** The recent decision trail. */
+export async function fetchAuditTrail(limit = 50): Promise<{ entries: AuditEntry[] }> {
+  const res = await fetch(`/api/audit?limit=${limit}`);
+  if (!res.ok) throw new Error(`audit ${res.status}`);
   return res.json();
 }

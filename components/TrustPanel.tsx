@@ -231,6 +231,15 @@ function Verdict({ verdict }: { verdict: ComplianceResponse }) {
               <span className="text-ink/50">Escalated to a relationship manager: </span>
               <span className="font-mono text-ink">{verdict.ticket.id}</span>
               <span className="text-ink/50"> ({verdict.ticket.reason.replace(/_/g, " ")}, {verdict.ticket.status})</span>
+              {" "}
+              <a
+                href="/rm"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-brand-green underline underline-offset-2"
+              >
+                open the RM queue →
+              </a>
             </p>
           ) : (
             <p className="text-ink/50">No human escalation needed — within straight-through limits.</p>
