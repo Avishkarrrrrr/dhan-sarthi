@@ -1,7 +1,7 @@
 import { getMarketSnapshot, syntheticSnapshot, type MarketSnapshot } from "@/lib/market/nifty";
 import { run as runCompliance } from "@/lib/compliance/pipeline";
 import { DISCLAIMERS } from "@/lib/compliance/guardrails";
-import type { AgentView, CommitteeEvent, FinancialSnapshot } from "@/lib/contracts/types";
+import { ASSET_CLASSES, type AgentView, type CommitteeEvent, type FinancialSnapshot } from "@/lib/contracts/types";
 import { COMMITTEE } from "./agents";
 import { strategise } from "./strategist";
 
@@ -48,6 +48,7 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
     spokenText: allocation.rationale,
     views,
     confidence,
+    tiltSpread: tiltSpread(views),
   });
 
   yield { type: "compliance", verdict: result.verdict };
@@ -58,11 +59,28 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
     answer: {
       // Never the proposal when compliance replaced it.
       allocation: result.finalAllocation,
+      actions: result.actions,
       spokenText: result.spokenText,
       disclaimers: DISCLAIMERS,
       auditId: result.audit.auditId,
     },
   };
+}
+
+/**
+ * How far apart the desks are, on the class they disagree about most.
+ *
+ * A committee whose members point in opposite directions has not reached a
+ * view — it has averaged two of them, and the average is nobody's
+ * recommendation. That is a case for a human, so the gate gets to see it.
+ */
+function tiltSpread(views: AgentView[]): number {
+  let widest = 0;
+  for (const cls of ASSET_CLASSES) {
+    const tilts = views.map((v) => v.tilt[cls] ?? 0);
+    widest = Math.max(widest, Math.max(...tilts) - Math.min(...tilts));
+  }
+  return widest;
 }
 
 async function safeMarket(): Promise<MarketSnapshot> {

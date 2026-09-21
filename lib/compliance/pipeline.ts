@@ -5,8 +5,10 @@ import type {
   ComplianceVerdict,
   EscalationTicket,
   FinancialSnapshot,
+  ProposedAction,
   Violation,
 } from "@/lib/contracts/types";
+import { proposeActions } from "@/lib/actions/propose";
 import * as audit from "@/lib/audit/log";
 import { gate } from "@/lib/hitl/gate";
 import { DISCLAIMERS, checkText, ensureDisclaimers, redactText } from "./guardrails";
@@ -35,12 +37,16 @@ export interface PipelineInput {
   views?: AgentView[];
   /** Mean committee confidence, feeds the escalation gate. */
   confidence?: number;
+  /** Spread between the most and least bullish desk, feeds the same gate. */
+  tiltSpread?: number;
 }
 
 export interface PipelineResult {
   verdict: ComplianceVerdict;
   /** The allocation that may actually be acted on — rewritten if there was one. */
   finalAllocation: Allocation;
+  /** What the customer is actually being asked to authorise. */
+  actions: ProposedAction[];
   /** Vetted, disclaimed text safe to speak. */
   spokenText: string;
   disclaimers: string[];
@@ -97,12 +103,28 @@ export function run(input: PipelineInput): PipelineResult {
     redactText(input.spokenText ?? verdict.explanation) || verdict.explanation,
   );
 
-  const ticket = gate({ allocation, snapshot, verdict, confidence });
+  /*
+   * Actions come from the allocation that may actually be acted on — the
+   * rewritten one when compliance replaced the proposal. Proposing trades off
+   * an allocation the pipeline just refused would put the blocked plan in
+   * front of the customer with an Approve button under it.
+   */
+  const actions = proposeActions(finalAllocation, snapshot);
+
+  const ticket = gate({
+    allocation: finalAllocation,
+    snapshot,
+    verdict,
+    confidence,
+    tiltSpread: input.tiltSpread,
+    actions,
+  });
 
   const entry = audit.append({
     customerId: snapshot.customer.id,
     views,
     allocation,
+    actions,
     verdict,
     hitl: ticket ?? undefined,
     finalSpokenText: safeText,
@@ -111,6 +133,7 @@ export function run(input: PipelineInput): PipelineResult {
   return {
     verdict,
     finalAllocation,
+    actions,
     spokenText: safeText,
     disclaimers: DISCLAIMERS,
     ticket,

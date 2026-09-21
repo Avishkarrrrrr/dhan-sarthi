@@ -28,11 +28,34 @@ export function append(entry: Omit<AuditEntry, "auditId" | "timestamp"> & Partia
     customerId: entry.customerId,
     views: entry.views,
     allocation: entry.allocation,
+    actions: entry.actions,
     verdict: entry.verdict,
     hitl: entry.hitl,
+    tax: entry.tax,
     finalSpokenText: entry.finalSpokenText,
   };
   return store.prepend(full);
+}
+
+/**
+ * Record the customer's own decision on their Action Card.
+ *
+ * It lands on the same entry as the RM's signature deliberately. The customer
+ * consents to their money; the bank signs for its advice. Those two facts are
+ * only worth anything together — split across two logs, neither proves the
+ * chain held. Returns undefined for an unknown entry.
+ */
+export function recordCustomerDecision(
+  auditId: string,
+  decision: "approved" | "declined",
+): AuditEntry | undefined {
+  const entry = get(auditId);
+  if (!entry) return undefined;
+  entry.customerDecision = decision;
+  entry.customerDecidedAt = new Date().toISOString();
+  // The entry is a live reference into the store; this is what persists it.
+  store.touch();
+  return entry;
 }
 
 export function get(auditId: string): AuditEntry | undefined {

@@ -17,6 +17,7 @@
     "@anthropic-ai/bedrock-sdk": "^0.33.4",
     "@google/genai": "^2.11.0",
     "framer-motion": "^12.42.2",
+    "lucide-react": "^1.47.0",
     "next": "^15.5.20",
     "pg": "^8.23.0",
     "react": "^18.3.1",

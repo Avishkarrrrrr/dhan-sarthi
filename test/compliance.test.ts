@@ -190,10 +190,14 @@ describe("pipeline", () => {
     expect(entry!.finalSpokenText).toBe(result.spokenText);
   });
 
-  it("round-trips an RM decision", () => {
+  it("round-trips an RM decision, and records who made it", () => {
     const { ticket } = run({ allocation: bad, snapshot, spokenText: bad.rationale });
-    const decided = queue.decide(ticket!.id, "approved");
+    const decided = queue.decide(ticket!.id, "approved", "A. Mehta · EMP4471");
     expect(decided!.status).toBe("approved");
+    // The named human is the deliverable — an approval nobody signed proves
+    // nothing, and looks like it proves something.
+    expect(decided!.decidedBy).toBe("A. Mehta · EMP4471");
+    expect(decided!.decidedAt).toBeTruthy();
     expect(queue.list("pending")).toHaveLength(0);
   });
 });

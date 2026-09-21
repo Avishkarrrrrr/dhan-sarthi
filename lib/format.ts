@@ -1,3 +1,5 @@
+import type { ProposedAction } from "@/lib/contracts/types";
+
 /** INR formatting with lakh/crore where natural. */
 export function inr(n: number): string {
   return "₹" + Math.round(n).toLocaleString("en-IN");
@@ -23,3 +25,17 @@ export const ASSET_LABELS: Record<string, string> = {
 
 /** Chart palette derived from the brand green. */
 export const CHART_COLORS = ["#0B7A4B", "#12B886", "#38D9A9", "#0CA678", "#087F5B", "#66D9AE", "#2F9E44"];
+
+/**
+ * How an action reads on screen. Both approval surfaces use these words, so
+ * the customer and the RM are looking at the same sentence — which is the
+ * point of `ProposedAction` being one contract rather than two.
+ */
+export const ACTION_VERB: Record<ProposedAction["kind"], string> = {
+  buy: "Buy",
+  sell: "Sell",
+  start_sip: "Start a SIP into",
+  step_up_sip: "Step up the SIP into",
+  switch: "Switch into",
+  rebalance: "Rebalance",
+};

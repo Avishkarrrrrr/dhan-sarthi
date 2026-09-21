@@ -249,12 +249,14 @@ export async function fetchRmQueue(status?: EscalationTicket["status"]): Promise
 export async function postRmDecision(
   ticketId: string,
   decision: "approved" | "modified" | "rejected",
+  decidedBy: string,
   modified?: Allocation,
+  note?: string,
 ): Promise<EscalationTicket> {
   const res = await fetch("/api/rm/decide", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticketId, decision, modified }),
+    body: JSON.stringify({ ticketId, decision, decidedBy, modified, note }),
   });
   if (!res.ok) {
     const msg = await res.json().catch(() => ({}));
@@ -323,4 +325,24 @@ export async function streamCommittee(
       /* ignore */
     }
   }
+}
+
+/**
+ * The customer's own approve/decline on their Action Card. Lands on the same
+ * audit entry as the RM's signature — see `/api/action/decide`.
+ */
+export async function postActionDecision(
+  auditId: string,
+  decision: "approved" | "declined",
+): Promise<AuditEntry> {
+  const res = await fetch("/api/action/decide", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ auditId, decision }),
+  });
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({}));
+    throw new Error(msg.error || `action decide ${res.status}`);
+  }
+  return res.json();
 }

@@ -99,7 +99,14 @@ export interface InvestmentPolicyStatement {
 
 // ============ AGENT LAYER (Workstream A) ============
 
-export type AgentId = "treasury" | "markets" | "macro" | "bonds" | "gold" | "behaviour";
+export type AgentId =
+  | "treasury"
+  | "markets"
+  | "macro"
+  | "bonds"
+  | "gold"
+  | "behaviour"
+  | "tax";
 
 /** Every specialist emits exactly this shape. */
 export interface AgentView {
@@ -113,12 +120,55 @@ export interface AgentView {
 }
 
 /** Strategist output: the proposed allocation, before compliance sees it. */
+/** Does the stated SIP, stepped up each year, actually reach the target? */
+export interface GapAnalysis {
+  requiredMonthlySip: number;
+  statedMonthlySip: number;
+  /** > 0 means they are under-investing by this much a month. */
+  shortfall: number;
+  projectedCorpus: number;
+  targetCorpus: number;
+  onTrack: boolean;
+}
+
 export interface Allocation {
   weights: Record<AssetClass, number>; // sums to 1
   expectedReturnPct: number;
   volatilityPct: number;
   rationale: string;
   contributingViews: AgentId[];
+  /** Optional: absent on a hand-built proposal with no plan behind it. */
+  gap?: GapAnalysis;
+}
+
+// ============ TAX (the Tax desk) ============
+
+/** One purchase lot. Without an acquisition date there is no holding period. */
+export interface TaxLot {
+  acquiredOn: string; // ISO date
+  quantity: number;
+  costPerUnit: number;
+}
+
+export interface TaxAction {
+  kind: "ltcg_harvest" | "loss_harvest" | "80c_gap" | "hold_for_ltcg";
+  instrument: string;
+  quantity?: number;
+  /** INR. The headline number — certain, unlike a projected return. */
+  estimatedSaving: number;
+  detail: string;
+  daysToLongTerm?: number;
+}
+
+export interface TaxOptimization {
+  financialYear: string;
+  realisedGains: { shortTerm: number; longTerm: number };
+  unrealisedGains: { shortTerm: number; longTerm: number };
+  ltcgExemptionRemaining: number;
+  section80cUsed: number;
+  section80cGap: number;
+  actions: TaxAction[];
+  totalEstimatedSaving: number;
 }
 
 export type CommitteeEvent =
@@ -132,6 +182,8 @@ export type CommitteeEvent =
 export interface FinalAnswer {
   /** Possibly the compliance-rewritten allocation, not the proposed one. */
   allocation: Allocation;
+  actions: ProposedAction[];
+  tax?: TaxOptimization;
   spokenText: string;
   disclaimers: string[];
   auditId: string;
@@ -160,13 +212,76 @@ export interface ComplianceVerdict {
   explanation: string;
 }
 
+/**
+ * A concrete thing to do. The customer sees it on their Action Card as "approve
+ * this"; the RM sees the same object as "does the bank stand behind this".
+ */
+export interface ProposedAction {
+  kind: "buy" | "sell" | "start_sip" | "step_up_sip" | "switch" | "rebalance";
+  instrument: string;
+  /** INR. The gate reads this, not net worth — a big book is not a big action. */
+  amount: number;
+  reason: string;
+}
+
+/** The RM console has one tab per kind. */
+export type TicketKind = "advice_approval" | "retention_alert";
+
 export interface EscalationTicket {
   id: string;
-  reason: "high_value" | "borderline" | "low_confidence";
+  kind: TicketKind;
+  reason: "high_value" | "borderline" | "low_confidence" | "deposit_flight";
   customerId: string;
-  proposed: Allocation;
+  /** Present on an advice approval. */
+  proposed?: Allocation;
+  /** Present on a retention alert. */
+  retention?: RetentionInsight;
+  actions: ProposedAction[];
   createdAt: string;
   status: "pending" | "approved" | "modified" | "rejected";
+  /**
+   * The named human who signed. Required once a decision is recorded — this
+   * record *is* the deliverable: it is what turns "an AI gave advice" into
+   * "the bank gave advice, and this person is accountable for it".
+   */
+  decidedBy?: string;
+  decidedAt?: string;
+  note?: string;
+}
+
+/** Money leaving the bank, spotted in the transaction feed. */
+export type OutflowDestination =
+  | "external_broker"
+  | "competitor_bank"
+  | "nbfc_deposit"
+  | "mf_platform"
+  | "unknown";
+
+export interface OutflowSignal {
+  id: string;
+  detectedOn: string;
+  amount: number;
+  destination: OutflowDestination;
+  /** What the statement narration hinted at — "ZERODHA", "HDFC BANK". */
+  counterpartyHint: string;
+  recurring: boolean;
+  trailing3mTotal: number;
+  pctOfBalance: number;
+  severity: "watch" | "elevated" | "critical";
+}
+
+export interface RetentionInsight {
+  signals: OutflowSignal[];
+  /** Net change in balances over the window, INR. */
+  balanceTrend3m: number;
+  attritionRisk: number; // 0..1
+  narrative: string;
+  /**
+   * A suitable IDBI alternative. Runs through the same compliance pipeline as
+   * any other recommendation — a retention engine that skips suitability is a
+   * mis-selling engine.
+   */
+  counterOffer: ProposedAction[];
 }
 
 export interface AuditEntry {
@@ -176,7 +291,19 @@ export interface AuditEntry {
   views: AgentView[];
   allocation: Allocation;
   verdict: ComplianceVerdict;
+  actions?: ProposedAction[];
   hitl?: EscalationTicket;
+  /**
+   * The customer's own decision on their Action Card.
+   *
+   * Deliberately on the same entry as `hitl.decidedBy`: the customer consents
+   * to their money, the bank signs for its advice, and the pairing of those two
+   * signatures on one record is the whole accountability chain. Split across
+   * two logs it proves nothing.
+   */
+  customerDecision?: "approved" | "declined";
+  customerDecidedAt?: string;
+  tax?: TaxOptimization;
   finalSpokenText: string;
 }
 

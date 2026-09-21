@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ActionCard } from "./ActionCard";
 import { useRef, useState } from "react";
 import type { AssetClass } from "@/lib/data/types";
 import type {
@@ -294,6 +295,17 @@ export function CommitteeRoom({ customerId, riskProfile }: { customerId: string;
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/*
+        The customer's own gate. Deliberately below the compliance verdict and
+        above nothing else: they approve what the bank is willing to recommend,
+        not the proposal compliance refused.
+      */}
+      {answer && answer.actions?.length > 0 && (
+        <div className="mt-3">
+          <ActionCard actions={answer.actions} auditId={answer.auditId} escalated={!!ticket} />
+        </div>
+      )}
     </section>
   );
 }
