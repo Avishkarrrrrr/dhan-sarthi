@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import type { Exchange } from "@/lib/agents/debate";
 import { ActionCard } from "./ActionCard";
 import { TaxPanel } from "./TaxPanel";
 import { useRef, useState } from "react";
@@ -45,13 +46,24 @@ type Seat = {
   tilt?: Partial<Record<AssetClass, number>>;
 };
 
-type Phase = "idle" | "deliberating" | "reconciling" | "vetting" | "done";
+type Phase = "idle" | "deliberating" | "debating" | "reconciling" | "vetting" | "done";
 
 /**
  * Short forms for the tilt rows. The full labels ("Cash & Liquid") truncate to
  * "CASH & LI…" at this width, which is unreadable — and the row is about the
  * direction of the lean, so the label only has to identify the sleeve.
  */
+/** Desk names, matching the seats above. */
+const DESK_LABEL: Record<AgentId, string> = {
+  treasury: "Treasury",
+  markets: "Markets",
+  macro: "Volatility",
+  bonds: "Fixed income",
+  gold: "Gold",
+  behaviour: "Behaviour",
+  tax: "Tax",
+};
+
 const SHORT_LABEL: Record<AssetClass, string> = {
   equity: "Equity",
   mutual_fund: "Funds",
@@ -83,6 +95,7 @@ export function CommitteeRoom({
   const [seats, setSeats] = useState<Record<string, Seat>>({});
   const [phase, setPhase] = useState<Phase>("idle");
   const [allocation, setAllocation] = useState<Allocation | null>(null);
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [verdict, setVerdict] = useState<ComplianceVerdict | null>(null);
   const [ticket, setTicket] = useState<EscalationTicket | null>(null);
   const [answer, setAnswer] = useState<FinalAnswer | null>(null);
@@ -100,6 +113,7 @@ export function CommitteeRoom({
     setSeats(Object.fromEntries(DESKS.map((d) => [d.id, { status: "waiting" as const }])));
     setPhase("deliberating");
     setAllocation(null);
+    setExchanges([]);
     setVerdict(null);
     setTicket(null);
     setAnswer(null);
@@ -126,6 +140,10 @@ export function CommitteeRoom({
                   tilt: e.view.tilt,
                 },
               }));
+              break;
+            case "debate":
+              setPhase("debating");
+              setExchanges((x) => [...x, e.exchange]);
               break;
             case "strategist":
               setPhase("reconciling");
@@ -174,6 +192,7 @@ export function CommitteeRoom({
             <h3 className="text-sm font-semibold text-white">
               {phase === "idle" && "Seven desks, one recommendation"}
               {phase === "deliberating" && `Deliberating · ${spoken} of ${DESKS.length} reported`}
+              {phase === "debating" && "The desks are arguing it out"}
               {phase === "reconciling" && "Strategist reconciling the views"}
               {phase === "vetting" && "Compliance reviewing the proposal"}
               {phase === "done" && "Decision recorded"}
@@ -314,6 +333,48 @@ export function CommitteeRoom({
         above nothing else: they approve what the bank is willing to recommend,
         not the proposal compliance refused.
       */}
+      {/*
+        The argument. Shown between the desks and the strategist because that
+        is where it happens — a committee that never visibly disagrees is a
+        committee nobody believes met.
+      */}
+      {exchanges.length > 0 && (
+        <div className="mt-3 space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+            Where they disagreed
+          </p>
+          {exchanges.map((x, i) => (
+            <motion.div
+              key={`${x.from}-${x.assetClass}-${i}`}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.12 }}
+              className="rounded-xl border border-white/10 bg-white/5 p-3"
+            >
+              <div className="mb-1 flex items-center gap-1.5 text-[10px]">
+                <span className="font-semibold text-brand-glow">{DESK_LABEL[x.from]}</span>
+                <span className="text-white/35">answering</span>
+                <span className="font-semibold text-white/80">{DESK_LABEL[x.to]}</span>
+                <span className="ml-auto font-mono tabular-nums text-white/45">
+                  {SHORT_LABEL[x.assetClass]} {x.before > 0 ? "+" : ""}
+                  {x.before.toFixed(2)}
+                  {x.after !== x.before && (
+                    <>
+                      {" → "}
+                      <span className={x.after > x.before ? "text-signal-up" : "text-signal-down"}>
+                        {x.after > 0 ? "+" : ""}
+                        {x.after.toFixed(2)}
+                      </span>
+                    </>
+                  )}
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-white/75">{x.text}</p>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
       {answer?.tax && (
         <div className="mt-3">
           <TaxPanel tax={answer.tax} />
@@ -333,11 +394,12 @@ export function CommitteeRoom({
 function PhaseRail({ phase }: { phase: Phase }) {
   const STAGES: { key: Phase; label: string }[] = [
     { key: "deliberating", label: "Desks" },
+    { key: "debating", label: "Debate" },
     { key: "reconciling", label: "Strategist" },
     { key: "vetting", label: "Compliance" },
     { key: "done", label: "Answer" },
   ];
-  const order: Phase[] = ["idle", "deliberating", "reconciling", "vetting", "done"];
+  const order: Phase[] = ["idle", "deliberating", "debating", "reconciling", "vetting", "done"];
   const at = order.indexOf(phase);
 
   return (

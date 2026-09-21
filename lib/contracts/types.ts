@@ -342,6 +342,18 @@ export interface TaxOptimization {
 export type CommitteeEvent =
   | { type: "agent_start"; agentId: AgentId }
   | { type: "agent_view"; view: AgentView }
+  /** A desk answering another desk, and moving because of it. */
+  | {
+      type: "debate";
+      exchange: {
+        from: AgentId;
+        to: AgentId;
+        assetClass: AssetClass;
+        text: string;
+        before: number;
+        after: number;
+      };
+    }
   | { type: "strategist"; allocation: Allocation }
   | { type: "compliance"; verdict: ComplianceVerdict }
   | { type: "hitl"; ticket: EscalationTicket | null }

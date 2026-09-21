@@ -5,6 +5,7 @@ import { ASSET_CLASSES, type AgentView, type CommitteeEvent, type FinancialSnaps
 import { COMMITTEE } from "./agents";
 import { strategise } from "./strategist";
 import { optimiseTax } from "./tax";
+import { debate } from "./debate";
 import { selectToolProvider, type ToolProvider } from "@/lib/mcp/registry";
 
 /**
@@ -57,17 +58,29 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
    */
   const tax = optimiseTax(snapshot);
 
-  const allocation = strategise(views, snapshot);
+  /*
+   * The second round. Desks that disagree sharply argue it out, and the less
+   * certain one concedes ground — which changes the tilts the strategist then
+   * fuses, so the argument has consequences rather than being a screensaver.
+   */
+  const { views: settled, exchanges } = debate(views);
+  for (const exchange of exchanges) {
+    yield { type: "debate", exchange };
+  }
+
+  const allocation = strategise(settled, snapshot);
   yield { type: "strategist", allocation };
 
-  const confidence = views.reduce((s, v) => s + v.confidence, 0) / (views.length || 1);
+  const confidence = settled.reduce((s, v) => s + v.confidence, 0) / (settled.length || 1);
   const result = runCompliance({
     allocation,
     snapshot,
     spokenText: allocation.rationale,
-    views,
+    views: settled,
     confidence,
-    tiltSpread: tiltSpread(views),
+    // Measured after the argument: a spread that survived a debate is a real
+    // disagreement, and that is what should reach the escalation gate.
+    tiltSpread: tiltSpread(settled),
     tax,
     mcpCalls: tools.calls(),
   });
