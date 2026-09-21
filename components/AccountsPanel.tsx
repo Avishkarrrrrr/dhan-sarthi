@@ -5,6 +5,7 @@ import type { AssetClass, Holding } from "@/lib/data/types";
 import { inr, ASSET_LABELS } from "@/lib/format";
 import { fetchQuotes, postAaJourney, type AaJourneyResponse } from "@/lib/client/api";
 import { searchInstruments, type Instrument } from "@/lib/import/symbols";
+import { ImportWizard } from "./import/ImportWizard";
 
 const ADDABLE: { value: AssetClass; label: string }[] = [
   { value: "equity", label: "Equity / Stocks" },
@@ -43,6 +44,7 @@ export function AccountsPanel({
    * anything at all beyond 80C headroom.
    */
   const [addOpen, setAddOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [addClass, setAddClass] = useState<AssetClass>("gold");
   const [addName, setAddName] = useState("");
   const [addAmount, setAddAmount] = useState(100000);
@@ -237,10 +239,39 @@ export function AccountsPanel({
       <div className="mt-4 border-t border-brand-light pt-3">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-brand-deep">Investments & other assets</h3>
-          <button onClick={() => setAddOpen((v) => !v)} className="rounded-full bg-brand-green/10 px-2.5 py-1 text-xs font-medium text-brand-green">
-            {addOpen ? "Close" : "+ Add"}
-          </button>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => {
+                setImporting((v) => !v);
+                setAddOpen(false);
+              }}
+              className="rounded-full bg-brand-green/10 px-2.5 py-1 text-xs font-medium text-brand-green"
+            >
+              {importing ? "Close" : "Import CAS"}
+            </button>
+            <button
+              onClick={() => {
+                setAddOpen((v) => !v);
+                setImporting(false);
+              }}
+              className="rounded-full bg-brand-green/10 px-2.5 py-1 text-xs font-medium text-brand-green"
+            >
+              {addOpen ? "Close" : "+ Add"}
+            </button>
+          </div>
         </div>
+
+        {importing && (
+          <div className="mb-3 animate-fade-in">
+            <ImportWizard
+              onClose={() => setImporting(false)}
+              onImport={(added) => {
+                setHoldings([...holdings, ...added]);
+                setImporting(false);
+              }}
+            />
+          </div>
+        )}
 
         {addOpen && (
           <div className="mb-3 space-y-2 rounded-xl bg-surface p-3 animate-fade-in">

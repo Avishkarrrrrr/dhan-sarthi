@@ -129,6 +129,32 @@ export interface AggregationResult {
   missing: SourceKind[];
 }
 
+/** How a holding got into the app. */
+export type ImportMethod = "cas_nsdl" | "cas_cdsl" | "cas_cams" | "broker" | "manual";
+
+export interface ParsedHolding {
+  kind: "equity" | "mf" | "bond";
+  isin?: string;
+  symbol?: string;
+  schemeName?: string;
+  name: string;
+  quantity: number;
+  /** Market value as printed on the statement, where it gives one. */
+  value?: number;
+  lots: TaxLot[];
+  /** Drives the review screen: the user supplies what the file did not carry. */
+  needsCostBasis: boolean;
+}
+
+export interface ImportResult {
+  method: ImportMethod;
+  parsedAt: string;
+  holdings: ParsedHolding[];
+  warnings: string[];
+  /** Masked. The raw PAN is never stored, logged, or returned. */
+  panMasked: string;
+}
+
 // ============ STAGE 2 — DISCOVER (the voice interview) ============
 
 export type DiscoverySlot =
