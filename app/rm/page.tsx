@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   FileClock,
   PenLine,
+  Radar,
   RefreshCw,
   ShieldAlert,
   TrendingDown,
@@ -110,6 +111,27 @@ export default function RmConsole() {
     refresh();
   }, [refresh]);
 
+  /*
+   * Sweep the roster for money leaving the bank. An RM does not ask "how is
+   * this customer doing" — they ask "who is leaving", so the scan runs across
+   * everyone rather than one at a time.
+   */
+  const [scanning, setScanning] = useState(false);
+  const scan = async () => {
+    setScanning(true);
+    try {
+      const res = await fetch("/api/rm/scan", { method: "POST" });
+      if (!res.ok) throw new Error(`scan ${res.status}`);
+      await refresh();
+      setTab("retention_alert");
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const decide = async (id: string, decision: (typeof DECISIONS)[number]["id"]) => {
     if (!rm.trim()) {
       setError("Enter your name before deciding — the record has to say who signed.");
@@ -151,13 +173,23 @@ export default function RmConsole() {
             customer consents to their money; this is where the bank signs for its advice.
           </p>
         </div>
-        <button
-          onClick={refresh}
-          className="flex items-center gap-1.5 rounded-xl border border-brand-light bg-white px-3 py-2 text-xs font-medium text-ink/70 hover:bg-surface"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={scan}
+            disabled={scanning}
+            className="flex items-center gap-1.5 rounded-xl border border-brand-light bg-white px-3 py-2 text-xs font-medium text-ink/70 hover:bg-surface disabled:opacity-50"
+          >
+            <Radar className="h-3.5 w-3.5" />
+            {scanning ? "Scanning…" : "Scan for deposit flight"}
+          </button>
+          <button
+            onClick={refresh}
+            className="flex items-center gap-1.5 rounded-xl border border-brand-light bg-white px-3 py-2 text-xs font-medium text-ink/70 hover:bg-surface"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </button>
+        </div>
       </header>
 
       {/* Who is signing. */}

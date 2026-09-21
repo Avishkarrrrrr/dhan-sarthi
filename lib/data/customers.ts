@@ -82,6 +82,13 @@ const CUSTOMERS: Customer[] = [
       { category: "SIP / Investments", amount: 40000 },
       { category: "Shopping", amount: 20000 },
       { category: "Travel", amount: 15000 },
+      /*
+       * A standing transfer to an external broker. This is what the
+       * deposit-flight radar reads — the destination is only ever visible in
+       * the narration, so a persona meant to exercise it has to carry a real
+       * one rather than a tidy category label.
+       */
+      { category: "NEFT/ZERODHA BROKING/ONLINE", amount: 150000 },
     ]),
     goals: [
       { id: "rajesh-child", label: "Child's higher education", targetAmount: 8000000, targetYear: 2035, current: 1200000 },

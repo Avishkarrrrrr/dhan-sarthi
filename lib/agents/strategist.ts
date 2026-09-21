@@ -14,7 +14,7 @@ import {
  *
  * It starts from a house model for the customer's risk profile and lets the
  * committee move it, rather than letting the agents build a portfolio from
- * nothing. That ordering matters — six specialists each optimising their own
+ * nothing. That ordering matters — specialists each optimising their own
  * sleeve produce something no one would sign off, whereas a known starting
  * point that the committee nudges stays recognisable and explainable.
  *

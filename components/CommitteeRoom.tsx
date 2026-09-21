@@ -19,7 +19,7 @@ import { ASSET_LABELS } from "@/lib/format";
 /**
  * The committee, as a room you watch.
  *
- * Six desks are seated before anyone speaks, so the shape of the decision is
+ * Every desk is seated before anyone speaks, so the shape of the decision is
  * visible from the start and each arriving view lands somewhere the eye is
  * already looking. The order is the argument: specialists, then a strategist
  * reconciling them, then compliance — which can overrule everything above it.
@@ -32,6 +32,7 @@ const DESKS: { id: AgentId; label: string; role: string; icon: string }[] = [
   { id: "bonds", label: "Fixed income", role: "Horizon", icon: "📋" },
   { id: "gold", label: "Gold", role: "Hedging", icon: "🥇" },
   { id: "behaviour", label: "Behaviour", role: "Cash flow", icon: "🧭" },
+  { id: "tax", label: "Tax", role: "After-tax return", icon: "🧾" },
 ];
 
 type Seat = {
@@ -160,7 +161,7 @@ export function CommitteeRoom({ customerId, riskProfile }: { customerId: string;
               Investment committee
             </p>
             <h3 className="text-sm font-semibold text-white">
-              {phase === "idle" && "Six desks, one recommendation"}
+              {phase === "idle" && "Seven desks, one recommendation"}
               {phase === "deliberating" && `Deliberating · ${spoken} of ${DESKS.length} reported`}
               {phase === "reconciling" && "Strategist reconciling the views"}
               {phase === "vetting" && "Compliance reviewing the proposal"}
