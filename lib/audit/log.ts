@@ -32,6 +32,7 @@ export function append(entry: Omit<AuditEntry, "auditId" | "timestamp"> & Partia
     verdict: entry.verdict,
     hitl: entry.hitl,
     tax: entry.tax,
+    mcpCalls: entry.mcpCalls,
     finalSpokenText: entry.finalSpokenText,
   };
   return store.prepend(full);

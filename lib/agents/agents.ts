@@ -29,6 +29,14 @@ import {
 export interface AgentContext {
   snapshot: FinancialSnapshot;
   market: MarketSnapshot;
+  /**
+   * External research, already fetched and sanitised, when a tool provider is
+   * configured. Passed *in* rather than fetched here on purpose: an agent that
+   * makes a network call is no longer deterministic, and the committee's whole
+   * claim is that the same inputs give the same recommendation every time.
+   * Absent is the normal case.
+   */
+  research?: string;
 }
 
 export type Agent = (ctx: AgentContext) => AgentView;
@@ -69,7 +77,7 @@ export const treasury: Agent = ({ snapshot }) => {
 };
 
 /** Markets: trend and momentum on the Nifty, read off the live snapshot. */
-export const markets: Agent = ({ market }) => {
+export const markets: Agent = ({ market, research }) => {
   const emas = [market.above9Ema, market.above21Ema, market.above55Ema, market.above100Ema];
   const above = emas.filter(Boolean).length;
   // Trend score from EMA stack, tempered by an overbought/oversold RSI.
@@ -93,11 +101,14 @@ export const markets: Agent = ({ market }) => {
         : market.rsi < 30
           ? "That RSI is washed out, which historically favours adding rather than cutting."
           : "Momentum is neither stretched nor washed out."
-    }`,
+    }${research ? ` External research adds: ${research.slice(0, 280)}` : ""}`,
     sources: [
       `Nifty ${Math.round(market.nifty).toLocaleString("en-IN")}`,
       `RSI ${Math.round(market.rsi)}`,
       `${above}/4 EMAs reclaimed`,
+      // Cited, never silently absorbed: a reader should be able to tell which
+      // part of a view came from outside the bank.
+      ...(research ? ["External research (Tapetide)"] : []),
     ],
   };
 };

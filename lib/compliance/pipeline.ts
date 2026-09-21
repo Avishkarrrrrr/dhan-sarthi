@@ -42,6 +42,8 @@ export interface PipelineInput {
   tiltSpread?: number;
   /** The tax desk's working, recorded with everything else. */
   tax?: TaxOptimization;
+  /** External tool calls made on the way to this answer. */
+  mcpCalls?: AuditEntry["mcpCalls"];
 }
 
 export interface PipelineResult {
@@ -131,6 +133,7 @@ export function run(input: PipelineInput): PipelineResult {
     verdict,
     hitl: ticket ?? undefined,
     tax: input.tax,
+    mcpCalls: input.mcpCalls,
     finalSpokenText: safeText,
   });
 

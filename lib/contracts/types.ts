@@ -403,6 +403,12 @@ export interface AuditEntry {
   customerDecision?: "approved" | "declined";
   customerDecidedAt?: string;
   tax?: TaxOptimization;
+  /**
+   * Every external tool call made while producing this answer. "Which outside
+   * service saw what, and when" is a question a bank will ask, and the only
+   * acceptable time to be able to answer it is before they do.
+   */
+  mcpCalls?: { server: string; tool: string; args: string; at: string }[];
   finalSpokenText: string;
 }
 

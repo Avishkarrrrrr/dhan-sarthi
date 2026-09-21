@@ -5,6 +5,7 @@ import { ASSET_CLASSES, type AgentView, type CommitteeEvent, type FinancialSnaps
 import { COMMITTEE } from "./agents";
 import { strategise } from "./strategist";
 import { optimiseTax } from "./tax";
+import { selectToolProvider, type ToolProvider } from "@/lib/mcp/registry";
 
 /**
  * Runs the investment committee and streams what happens.
@@ -31,10 +32,19 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
   // being down should slow the committee's conviction, not stop the advice.
   const market = input.market ?? (await safeMarket());
 
+  /*
+   * External research, fetched once before anyone speaks. Best-effort and
+   * usually absent: the provider is disabled unless a token is configured, and
+   * in IDBI's VPC it will be, because tapetide.com is not one of the two
+   * egress domains we declared. The desks must be identical either way.
+   */
+  const tools = selectToolProvider();
+  const research = tools.enabled ? await safeResearch(tools) : undefined;
+
   const views: AgentView[] = [];
   for (const { id, agent } of COMMITTEE) {
     yield { type: "agent_start", agentId: id };
-    const view = agent({ snapshot, market });
+    const view = agent({ snapshot, market, research: id === "markets" ? research : undefined });
     views.push(view);
     yield { type: "agent_view", view };
   }
@@ -59,6 +69,7 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
     confidence,
     tiltSpread: tiltSpread(views),
     tax,
+    mcpCalls: tools.calls(),
   });
 
   yield { type: "compliance", verdict: result.verdict };
@@ -92,6 +103,20 @@ function tiltSpread(views: AgentView[]): number {
     widest = Math.max(widest, Math.max(...tilts) - Math.min(...tilts));
   }
   return widest;
+}
+
+/**
+ * Ask the markets desk's tool for a read on the index. A research service
+ * being unreachable, slow or hostile must never be the reason a customer does
+ * not get advice, so every failure lands on the same answer: no research.
+ */
+async function safeResearch(tools: ToolProvider): Promise<string | undefined> {
+  try {
+    const res = await tools.call("markets", "get_fii_dii_flows", { limit: 5 });
+    return res?.text;
+  } catch {
+    return undefined;
+  }
 }
 
 async function safeMarket(): Promise<MarketSnapshot> {
