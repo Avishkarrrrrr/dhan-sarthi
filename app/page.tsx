@@ -107,7 +107,7 @@ export default function Home() {
   const firstName = displayName.split(" ")[0] || "there";
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-4 lg:flex-row lg:items-start lg:gap-12 lg:p-10">
+    <main className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 p-0 sm:p-4 lg:flex-row lg:items-start lg:gap-12 lg:p-10">
       {/* Pitch rail (hidden on small screens) */}
       <div className="hidden max-w-sm lg:block lg:pt-10">
         <p className="text-sm font-semibold uppercase tracking-wider text-brand-green">IDBI Innovate · Track 01</p>
@@ -161,7 +161,7 @@ export default function Home() {
       <PhoneFrame>
         {/* App header */}
         {!onboarding && (
-        <header className="z-20 flex shrink-0 items-center justify-between bg-brand-deep px-4 pb-3 pt-8 text-white">
+        <header className="z-20 flex shrink-0 items-center justify-between bg-brand-deep px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] text-white sm:pt-8">
           <div>
             <p className="text-[11px] text-white/60">Good day,</p>
             <p className="text-base font-semibold leading-tight">{firstName}</p>

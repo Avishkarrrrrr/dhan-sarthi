@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AuditEntry } from "@/lib/contracts/types";
+import { JsonStore } from "@/lib/store/jsonStore";
 
 /**
  * Append-only audit trail. Every piece of advice the system emits is recorded
@@ -8,12 +9,13 @@ import type { AuditEntry } from "@/lib/contracts/types";
  * later. That traceability is the difference between an AI a bank can deploy
  * and one it cannot.
  *
- * In-memory for the prototype; the shape maps 1:1 onto a table, and
- * `lib/data/postgres.ts` already has the pool when we want to persist it.
+ * Durable, because it has to be: this used to be an array in memory, so a
+ * service restart erased every recommendation the system had ever made. A
+ * compliance record that a process recycle can delete is not a record.
  */
 
 const MAX_ENTRIES = 500;
-const entries: AuditEntry[] = [];
+const store = new JsonStore<AuditEntry>("audit", { max: MAX_ENTRIES });
 
 export function newAuditId(): string {
   return `AUD-${randomUUID().slice(0, 8).toUpperCase()}`;
@@ -30,21 +32,19 @@ export function append(entry: Omit<AuditEntry, "auditId" | "timestamp"> & Partia
     hitl: entry.hitl,
     finalSpokenText: entry.finalSpokenText,
   };
-  entries.unshift(full);
-  if (entries.length > MAX_ENTRIES) entries.length = MAX_ENTRIES;
-  return full;
+  return store.prepend(full);
 }
 
 export function get(auditId: string): AuditEntry | undefined {
-  return entries.find((e) => e.auditId === auditId);
+  return store.all().find((e) => e.auditId === auditId);
 }
 
 /** Most recent first. */
 export function list(limit = 50): AuditEntry[] {
-  return entries.slice(0, limit);
+  return store.all().slice(0, limit);
 }
 
 /** Test seam. */
 export function reset(): void {
-  entries.length = 0;
+  store.reset();
 }

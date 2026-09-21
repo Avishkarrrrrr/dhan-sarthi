@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 import type { EscalationTicket } from "@/lib/contracts/types";
+import { JsonStore } from "@/lib/store/jsonStore";
 
 /**
- * The RM escalation queue. In-memory for the prototype — swap for a table when
- * it needs to survive a restart; nothing else changes.
+ * The RM escalation queue.
+ *
+ * Durable: an escalation is a customer waiting on a human decision, and a
+ * restart used to drop the whole queue silently. Nobody would know what had
+ * been lost, which is the worst property a work queue can have.
  */
 
-const tickets: EscalationTicket[] = [];
+const store = new JsonStore<EscalationTicket>("hitl-queue", { max: 300 });
 
 export function create(
   input: Omit<EscalationTicket, "id" | "createdAt" | "status">,
@@ -17,16 +21,16 @@ export function create(
     createdAt: new Date().toISOString(),
     status: "pending",
   };
-  tickets.unshift(ticket);
-  return ticket;
+  return store.prepend(ticket);
 }
 
 export function list(status?: EscalationTicket["status"]): EscalationTicket[] {
-  return status ? tickets.filter((t) => t.status === status) : [...tickets];
+  const all = store.all();
+  return status ? all.filter((t) => t.status === status) : [...all];
 }
 
 export function get(id: string): EscalationTicket | undefined {
-  return tickets.find((t) => t.id === id);
+  return store.all().find((t) => t.id === id);
 }
 
 /** Record the RM's decision. Returns undefined for an unknown ticket. */
@@ -39,10 +43,13 @@ export function decide(
   if (!ticket) return undefined;
   ticket.status = decision;
   if (decision === "modified" && modified) ticket.proposed = modified;
+  // The ticket is a live reference into the store, so the change is already
+  // in memory — this is what gets it onto disk.
+  store.touch();
   return ticket;
 }
 
 /** Test seam. */
 export function reset(): void {
-  tickets.length = 0;
+  store.reset();
 }
