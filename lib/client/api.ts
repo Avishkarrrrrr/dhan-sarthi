@@ -8,7 +8,7 @@ import type { CompanyAnalysis } from "@/lib/research/companies";
 import type { MptResult } from "@/lib/finance/mpt";
 import type { CustomerSummary, Transaction } from "@/lib/data/types";
 import type { JourneyStep, KycProfile } from "@/lib/integrations/aa";
-import type { AuditEntry, ComplianceVerdict, Allocation, EscalationTicket } from "@/lib/contracts/types";
+import type { AuditEntry, CommitteeEvent, ComplianceVerdict, Allocation, EscalationTicket } from "@/lib/contracts/types";
 
 export async function fetchProfile(id: string): Promise<ProfileResponse> {
   const res = await fetch(`/api/profile?id=${encodeURIComponent(id)}`);
@@ -210,4 +210,58 @@ export async function fetchAuditTrail(limit = 50): Promise<{ entries: AuditEntry
   const res = await fetch(`/api/audit?limit=${limit}`);
   if (!res.ok) throw new Error(`audit ${res.status}`);
   return res.json();
+}
+
+/**
+ * Run the investment committee, streaming each event as it happens.
+ *
+ * The server sends newline-delimited JSON. Lines can be split across chunks,
+ * so the tail of each read is held back until a newline actually arrives —
+ * parsing per-chunk drops events under any real network.
+ */
+export async function streamCommittee(
+  customerId: string,
+  onEvent: (e: CommitteeEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch("/api/committee", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ customerId }),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    const msg = await res.json().catch(() => ({}));
+    throw new Error(msg.error || `committee ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const text = line.trim();
+      if (!text) continue;
+      try {
+        onEvent(JSON.parse(text) as CommitteeEvent);
+      } catch {
+        // A malformed line should not kill the rest of the run.
+      }
+    }
+  }
+
+  const tail = buffer.trim();
+  if (tail) {
+    try {
+      onEvent(JSON.parse(tail) as CommitteeEvent);
+    } catch {
+      /* ignore */
+    }
+  }
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AssetClass } from "@/lib/data/types";
 import type { Allocation, Severity, Violation } from "@/lib/contracts/types";
 import { postCompliance, type ComplianceResponse } from "@/lib/client/api";
+import { CommitteePanel } from "./CommitteePanel";
 import { ASSET_LABELS } from "@/lib/format";
 
 /**
@@ -23,30 +24,36 @@ interface Preset {
   allocation: Allocation;
 }
 
+/**
+ * Adversarial proposals, kept deliberately.
+ *
+ * The committee's own output is vetted live above; these exist to prove the
+ * checks bite on something the committee would never produce. They are the
+ * only fabricated allocations in the product, and they are labelled as tests.
+ */
 const PRESETS: Preset[] = [
-  {
-    id: "committee",
-    label: "Committee proposal",
-    blurb: "What the advisor would put to a moderate investor",
-    allocation: {
-      weights: { equity: 0.15, mutual_fund: 0.4, bonds: 0.15, fd: 0.15, gold: 0.08, cash: 0.07 },
-      expectedReturnPct: 10.4,
-      volatilityPct: 9.8,
-      rationale:
-        "Balanced growth tilt suited to a moderate profile with a five-year horizon, keeping the emergency buffer intact.",
-      contributingViews: ["treasury", "markets", "bonds"],
-    },
-  },
   {
     id: "pitch",
     label: "Aggressive pitch",
-    blurb: "The kind of proposal a commission-driven seller makes",
+    blurb: "All-in on equity, with a guaranteed-returns claim",
     allocation: {
       weights: { equity: 0.7, mutual_fund: 0.3, bonds: 0, fd: 0, gold: 0, cash: 0 },
       expectedReturnPct: 24,
       volatilityPct: 3,
       rationale:
         "Go all-in on equities now — this is a guaranteed way to double your money before the home purchase.",
+      contributingViews: ["markets"],
+    },
+  },
+  {
+    id: "leveraged",
+    label: "Leveraged position",
+    blurb: "A short bond leg funding extra equity",
+    allocation: {
+      weights: { equity: 0.55, mutual_fund: 0.4, bonds: -0.15, fd: 0.1, gold: 0.05, cash: 0.05 },
+      expectedReturnPct: 19,
+      volatilityPct: 16,
+      rationale: "Borrow against the bond sleeve to fund a larger equity position.",
       contributingViews: ["markets"],
     },
   },
@@ -65,7 +72,7 @@ const STATUS_STYLE: Record<ComplianceResponse["status"], { chip: string; label: 
 };
 
 export function TrustPanel({ customerId }: { customerId: string }) {
-  const [presetId, setPresetId] = useState(PRESETS[1].id);
+  const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [verdict, setVerdict] = useState<ComplianceResponse | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,16 +101,23 @@ export function TrustPanel({ customerId }: { customerId: string }) {
   return (
     <div className="flex-1 space-y-3 overflow-y-auto p-4 pb-6">
       <header>
-        <h2 className="text-base font-semibold text-brand-deep">Suitability &amp; compliance</h2>
+        <h2 className="text-base font-semibold text-brand-deep">Advice &amp; suitability</h2>
         <p className="mt-0.5 text-xs text-ink/60">
           Every recommendation is vetted against the firm&apos;s suitability limits before it reaches you.
           The checks are deterministic — the same proposal is judged the same way every time.
         </p>
       </header>
 
-      {/* Proposal to vet */}
+      <CommitteePanel customerId={customerId} />
+
+      {/* Adversarial proposals, to show the checks bite */}
       <section className="rounded-2xl border border-brand-light bg-white p-4 shadow-soft">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-ink/45">Proposal under review</p>
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink/45">
+          Test the guardrails
+        </p>
+        <p className="mb-2 text-[11px] text-ink/55">
+          Proposals the committee would never make, run through the same checks.
+        </p>
         <div className="mb-3 grid grid-cols-2 gap-2">
           {PRESETS.map((p) => (
             <button
