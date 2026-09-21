@@ -1,0 +1,390 @@
+[
+  {
+    "type": "agent_start",
+    "agentId": "treasury"
+  },
+  {
+    "type": "agent_view",
+    "view": {
+      "agentId": "treasury",
+      "tilt": {
+        "cash": 0.5044189189189189,
+        "fd": 0.25220945945945944,
+        "equity": -0.20176756756756756,
+        "mutual_fund": -0.20176756756756756
+      },
+      "confidence": 0.85,
+      "headline": "Liquidity cover is 3.0 months — build it before adding risk",
+      "reasoning": "Liquid assets cover 3.0 months of the ₹3,70,000 a month going out, against a six-month buffer. Until that gap closes, new money is better parked in cash and deposits than in growth assets.",
+      "sources": [
+        "Liquid cover 3.0 months",
+        "Monthly outgoings ₹3,70,000"
+      ]
+    }
+  },
+  {
+    "type": "agent_start",
+    "agentId": "markets"
+  },
+  {
+    "type": "agent_view",
+    "view": {
+      "agentId": "markets",
+      "tilt": {
+        "equity": 0.35,
+        "mutual_fund": 0.27999999999999997
+      },
+      "confidence": 0.45,
+      "headline": "Trend is constructive — 4 of 4 moving averages reclaimed",
+      "reasoning": "The Nifty is at 25,155, above 4 of its four reference moving averages, with RSI at 100. That RSI is stretched, so momentum is worth fading rather than chasing.",
+      "sources": [
+        "Nifty 25,155",
+        "RSI 100",
+        "4/4 EMAs reclaimed"
+      ]
+    }
+  },
+  {
+    "type": "agent_start",
+    "agentId": "macro"
+  },
+  {
+    "type": "agent_view",
+    "view": {
+      "agentId": "macro",
+      "tilt": {
+        "equity": 0.07999999999999997,
+        "gold": -0.09333333333333331,
+        "bonds": -0.05333333333333332
+      },
+      "confidence": 0.4,
+      "headline": "Volatility contained — India VIX at 13.4",
+      "reasoning": "India VIX is 13.4 against a long-run mid-teens average. Option markets are calm, which removes the case for defensive positioning on volatility grounds alone.",
+      "sources": [
+        "India VIX 13.4",
+        "Trend bullish"
+      ]
+    }
+  },
+  {
+    "type": "agent_start",
+    "agentId": "bonds"
+  },
+  {
+    "type": "agent_view",
+    "view": {
+      "agentId": "bonds",
+      "tilt": {
+        "bonds": -0.6400000000000001,
+        "fd": -0.4,
+        "equity": 0.4,
+        "mutual_fund": 0.4
+      },
+      "confidence": 0.75,
+      "headline": "Nearest goal is 9 years away — duration risk is affordable",
+      "reasoning": "The binding constraint is the nearest goal, 9 years out, not the longest one. That is long enough to ride out a normal cycle, so fixed income can play a diversifying rather than a protective role.",
+      "sources": [
+        "Nearest goal 9y",
+        "Target corpus ₹80,00,000"
+      ]
+    }
+  },
+  {
+    "type": "agent_start",
+    "agentId": "gold"
+  },
+  {
+    "type": "agent_view",
+    "view": {
+      "agentId": "gold",
+      "tilt": {
+        "gold": -0.21519999999999995
+      },
+      "confidence": 0.6,
+      "headline": "Gold at 8% — hedge is adequate",
+      "reasoning": "Gold is 8% of the portfolio against a 5% hedging allocation for current conditions. It is held for its behaviour when equities fall, not for its own return, so the position is sized rather than maximised.",
+      "sources": [
+        "Gold held 8%",
+        "India VIX 13.4"
+      ]
+    }
+  },
+  {
+    "type": "agent_start",
+    "agentId": "behaviour"
+  },
+  {
+    "type": "agent_view",
+    "view": {
+      "agentId": "behaviour",
+      "tilt": {
+        "cash": 0.2,
+        "equity": -0.12
+      },
+      "confidence": 0.6,
+      "headline": "Saving 0% of income — keep the plan simple",
+      "reasoning": "About 0% of income is reaching investments, and the largest spending category is 41% of monthly outgoings (NEFT/ZERODHA BROKING/ONLINE). At that rate, a plan that demands regular top-ups is unlikely to survive a bad month — simplicity beats optimisation.",
+      "sources": [
+        "Savings rate 0%",
+        "Top spend NEFT/ZERODHA BROKING/ONLINE"
+      ]
+    }
+  },
+  {
+    "type": "agent_start",
+    "agentId": "tax"
+  },
+  {
+    "type": "agent_view",
+    "view": {
+      "agentId": "tax",
+      "tilt": {
+        "mutual_fund": 0.15,
+        "fd": -0.1
+      },
+      "confidence": 0.5,
+      "headline": "Up to ₹45,000 of tax available this year",
+      "reasoning": "Purchase dates are not in the bank's data, so holding periods and cost basis cannot be computed — the gains work needs a portfolio import first. What can be said: ₹1,50,000 of 80C headroom is unused, worth up to ₹45,000 under the old regime, and roughly ₹35,000 a year of deposit interest is taxed at your full 30% slab.",
+      "sources": [
+        "Rates: FY 2026-27 (Budget 2025 rates)",
+        "No cost basis available",
+        "Deposit interest taxed at 30%"
+      ]
+    }
+  },
+  {
+    "type": "strategist",
+    "allocation": {
+      "weights": {
+        "equity": 0.2834,
+        "mutual_fund": 0.4331,
+        "bonds": 0.081,
+        "fd": 0.0573,
+        "gold": 0.0549,
+        "cash": 0.0903
+      },
+      "expectedReturnPct": 10.5,
+      "volatilityPct": 12.4,
+      "rationale": "Starting from the aggressive house model, the committee adjusted bonds and cash. The strongest view came from the treasury desk: liquidity cover is 3.0 months — build it before adding risk.",
+      "contributingViews": [
+        "treasury",
+        "markets",
+        "macro",
+        "bonds",
+        "gold",
+        "behaviour",
+        "tax"
+      ],
+      "gap": {
+        "requiredMonthlySip": 20464,
+        "statedMonthlySip": 0,
+        "shortfall": 20464,
+        "projectedCorpus": 2947418,
+        "targetCorpus": 8000000,
+        "onTrack": false
+      }
+    }
+  },
+  {
+    "type": "compliance",
+    "verdict": {
+      "status": "block",
+      "violations": [
+        {
+          "rule": "liquidity.emergency_fund",
+          "detail": "Leaves 1.8 months of expenses liquid, against a 6-month buffer.",
+          "severity": "high"
+        }
+      ],
+      "rewritten": {
+        "weights": {
+          "equity": 0.1703,
+          "mutual_fund": 0.2602,
+          "bonds": 0.0487,
+          "fd": 0.1894,
+          "gold": 0.033,
+          "cash": 0.2984
+        },
+        "expectedReturnPct": 8.3,
+        "volatilityPct": 7.5,
+        "rationale": "Adjusted to stay within the suitability limits for a aggressive investor: growth assets capped, defensive holdings and the emergency buffer restored. Original rationale: Starting from the aggressive house model, the committee adjusted bonds and cash. The strongest view came from the treasury desk: liquidity cover is 3.0 months — build it before adding risk.",
+        "contributingViews": [
+          "treasury",
+          "markets",
+          "macro",
+          "bonds",
+          "gold",
+          "behaviour",
+          "tax"
+        ]
+      },
+      "explanation": "Rajesh, I cannot recommend this. Leaves 1.8 months of expenses liquid, against a 6-month buffer. Here is what I can recommend instead: 30% cash, 26% mutual funds, 19% fixed deposits, 17% direct equity."
+    }
+  },
+  {
+    "type": "hitl",
+    "ticket": {
+      "kind": "advice_approval",
+      "reason": "high_value",
+      "customerId": "rajesh",
+      "proposed": {
+        "weights": {
+          "equity": 0.1703,
+          "mutual_fund": 0.2602,
+          "bonds": 0.0487,
+          "fd": 0.1894,
+          "gold": 0.033,
+          "cash": 0.2984
+        },
+        "expectedReturnPct": 8.3,
+        "volatilityPct": 7.5,
+        "rationale": "Adjusted to stay within the suitability limits for a aggressive investor: growth assets capped, defensive holdings and the emergency buffer restored. Original rationale: Starting from the aggressive house model, the committee adjusted bonds and cash. The strongest view came from the treasury desk: liquidity cover is 3.0 months — build it before adding risk.",
+        "contributingViews": [
+          "treasury",
+          "markets",
+          "macro",
+          "bonds",
+          "gold",
+          "behaviour",
+          "tax"
+        ]
+      },
+      "actions": [
+        {
+          "kind": "sell",
+          "instrument": "Blue-chip stocks",
+          "amount": 1025115,
+          "reason": "Brings direct equity down from 40% to 17%, which is what funds the rest."
+        },
+        {
+          "kind": "sell",
+          "instrument": "Nifty 50 Index Fund",
+          "amount": 116025,
+          "reason": "Brings mutual funds down from 29% to 26%, which is what funds the rest."
+        },
+        {
+          "kind": "sell",
+          "instrument": "Sovereign Gold Bonds",
+          "amount": 199745,
+          "reason": "Brings gold down from 8% to 3%, which is what funds the rest."
+        },
+        {
+          "kind": "buy",
+          "instrument": "Short-duration debt fund",
+          "amount": 221585,
+          "reason": "Takes bonds from 0% to 5% of the portfolio."
+        },
+        {
+          "kind": "buy",
+          "instrument": "IDBI Fixed Deposit",
+          "amount": 361725,
+          "reason": "Takes fixed deposits from 11% to 19% of the portfolio."
+        },
+        {
+          "kind": "buy",
+          "instrument": "IDBI Savings Account",
+          "amount": 757575,
+          "reason": "Takes cash from 13% to 30% of the portfolio."
+        }
+      ],
+      "id": "ESC-48D2606A",
+      "createdAt": "2026-09-21T14:28:46.400Z",
+      "status": "pending"
+    }
+  },
+  {
+    "type": "final",
+    "answer": {
+      "allocation": {
+        "weights": {
+          "equity": 0.1703,
+          "mutual_fund": 0.2602,
+          "bonds": 0.0487,
+          "fd": 0.1894,
+          "gold": 0.033,
+          "cash": 0.2984
+        },
+        "expectedReturnPct": 8.3,
+        "volatilityPct": 7.5,
+        "rationale": "Adjusted to stay within the suitability limits for a aggressive investor: growth assets capped, defensive holdings and the emergency buffer restored. Original rationale: Starting from the aggressive house model, the committee adjusted bonds and cash. The strongest view came from the treasury desk: liquidity cover is 3.0 months — build it before adding risk.",
+        "contributingViews": [
+          "treasury",
+          "markets",
+          "macro",
+          "bonds",
+          "gold",
+          "behaviour",
+          "tax"
+        ]
+      },
+      "actions": [
+        {
+          "kind": "sell",
+          "instrument": "Blue-chip stocks",
+          "amount": 1025115,
+          "reason": "Brings direct equity down from 40% to 17%, which is what funds the rest."
+        },
+        {
+          "kind": "sell",
+          "instrument": "Nifty 50 Index Fund",
+          "amount": 116025,
+          "reason": "Brings mutual funds down from 29% to 26%, which is what funds the rest."
+        },
+        {
+          "kind": "sell",
+          "instrument": "Sovereign Gold Bonds",
+          "amount": 199745,
+          "reason": "Brings gold down from 8% to 3%, which is what funds the rest."
+        },
+        {
+          "kind": "buy",
+          "instrument": "Short-duration debt fund",
+          "amount": 221585,
+          "reason": "Takes bonds from 0% to 5% of the portfolio."
+        },
+        {
+          "kind": "buy",
+          "instrument": "IDBI Fixed Deposit",
+          "amount": 361725,
+          "reason": "Takes fixed deposits from 11% to 19% of the portfolio."
+        },
+        {
+          "kind": "buy",
+          "instrument": "IDBI Savings Account",
+          "amount": 757575,
+          "reason": "Takes cash from 13% to 30% of the portfolio."
+        }
+      ],
+      "tax": {
+        "financialYear": "2026-27",
+        "realisedGains": {
+          "shortTerm": 0,
+          "longTerm": 0
+        },
+        "unrealisedGains": {
+          "shortTerm": 0,
+          "longTerm": 0
+        },
+        "ltcgExemptionRemaining": 125000,
+        "section80cUsed": 0,
+        "section80cGap": 150000,
+        "actions": [
+          {
+            "kind": "80c_gap",
+            "instrument": "ELSS (tax-saving equity fund)",
+            "estimatedSaving": 45000,
+            "detail": "Worth up to ₹45,000 at your 30% slab — but only if you file under the old regime, and ELSS locks the money up for 3 years."
+          }
+        ],
+        "totalEstimatedSaving": 45000
+      },
+      "spokenText": "Starting from the aggressive house model, the committee adjusted bonds and cash. The strongest view came from the treasury desk: liquidity cover is 3.0 months — build it before adding risk.\n\nMutual fund and market investments are subject to market risks. Please read all scheme-related documents carefully.\n\nThis is an automated suitability assessment based on the information available to the bank, not a personal recommendation from a registered investment adviser.\n\nPast performance does not indicate future returns.",
+      "disclaimers": [
+        "Mutual fund and market investments are subject to market risks. Please read all scheme-related documents carefully.",
+        "This is an automated suitability assessment based on the information available to the bank, not a personal recommendation from a registered investment adviser.",
+        "Past performance does not indicate future returns."
+      ],
+      "auditId": "AUD-0C363F00"
+    }
+  }
+]

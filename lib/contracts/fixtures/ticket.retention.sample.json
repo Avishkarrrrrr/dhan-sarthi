@@ -1,0 +1,29 @@
+{
+  "kind": "retention_alert",
+  "reason": "deposit_flight",
+  "customerId": "rajesh",
+  "retention": {
+    "signals": [
+      {
+        "id": "external_broker:ZERODHA",
+        "detectedOn": "2026-07-17",
+        "amount": 150000,
+        "destination": "external_broker",
+        "counterpartyHint": "ZERODHA",
+        "recurring": true,
+        "trailing3mTotal": 450000,
+        "pctOfBalance": 0.409,
+        "severity": "critical"
+      }
+    ],
+    "balanceTrend3m": 330000,
+    "attritionRisk": 0.65,
+    "narrative": "₹4,50,000 has left for an external broker (ZERODHA), and it is recurring. That is 41% of what Rajesh holds with us. Two more like this and the relationship is gone — worth a call before it is.",
+    "counterOffer": []
+  },
+  "actions": [],
+  "note": "The counter-offer was withheld: it did not pass the suitability checks for this customer (Leaves 2.4 months of expenses liquid, against a 6-month buffer.). The outflow is still worth a call — but not with this product.",
+  "id": "ESC-6F68FBB5",
+  "createdAt": "2026-09-21T14:28:46.401Z",
+  "status": "pending"
+}

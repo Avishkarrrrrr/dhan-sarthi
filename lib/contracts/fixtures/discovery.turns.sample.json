@@ -1,0 +1,80 @@
+[
+  {
+    "slot": "shortTermGoals",
+    "askedText": "What do you need money for in the next two or three years?",
+    "userTranscript": "a car and an emergency fund",
+    "extracted": {
+      "shortTermGoals": [
+        "a car",
+        "an emergency fund"
+      ]
+    },
+    "confidence": 0.9
+  },
+  {
+    "slot": "longTermGoals",
+    "askedText": "And further out — what are you building towards?",
+    "userTranscript": "retirement and my daughter's education",
+    "extracted": {
+      "longTermGoals": [
+        "retirement",
+        "daughter's education"
+      ]
+    },
+    "confidence": 0.9
+  },
+  {
+    "slot": "horizonYears",
+    "askedText": "How many years do you want to give this?",
+    "userTranscript": "15 years",
+    "extracted": {
+      "horizonYears": 15
+    },
+    "confidence": 0.9
+  },
+  {
+    "slot": "targetCorpus",
+    "askedText": "How much would you like to have at the end of it?",
+    "userTranscript": "2 crore",
+    "extracted": {
+      "targetCorpus": 20000000
+    },
+    "confidence": 0.9
+  },
+  {
+    "slot": "monthlyInvestable",
+    "askedText": "How much can you set aside each month?",
+    "userTranscript": "50 thousand a month",
+    "extracted": {
+      "monthlyInvestable": 50000
+    },
+    "confidence": 0.9
+  },
+  {
+    "slot": "annualStepUpPct",
+    "askedText": "Can you increase that a little each year, as your income grows?",
+    "userTranscript": "10 percent",
+    "extracted": {
+      "annualStepUpPct": 10
+    },
+    "confidence": 0.9
+  },
+  {
+    "slot": "riskAppetite",
+    "askedText": "If your investments dropped fifteen percent in a bad month, would you sell, wait, or buy more?",
+    "userTranscript": "I would wait it out",
+    "extracted": {
+      "riskAppetite": "moderate"
+    },
+    "confidence": 0.9
+  },
+  {
+    "slot": "liquidityBufferMonths",
+    "askedText": "How many months of expenses would you want to keep within reach?",
+    "userTranscript": "6 months",
+    "extracted": {
+      "liquidityBufferMonths": 6
+    },
+    "confidence": 0.9
+  }
+]

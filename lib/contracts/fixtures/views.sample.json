@@ -1,0 +1,106 @@
+[
+  {
+    "agentId": "treasury",
+    "tilt": {
+      "cash": 0.5044189189189189,
+      "fd": 0.25220945945945944,
+      "equity": -0.20176756756756756,
+      "mutual_fund": -0.20176756756756756
+    },
+    "confidence": 0.85,
+    "headline": "Liquidity cover is 3.0 months — build it before adding risk",
+    "reasoning": "Liquid assets cover 3.0 months of the ₹3,70,000 a month going out, against a six-month buffer. Until that gap closes, new money is better parked in cash and deposits than in growth assets.",
+    "sources": [
+      "Liquid cover 3.0 months",
+      "Monthly outgoings ₹3,70,000"
+    ]
+  },
+  {
+    "agentId": "markets",
+    "tilt": {
+      "equity": 0.35,
+      "mutual_fund": 0.27999999999999997
+    },
+    "confidence": 0.45,
+    "headline": "Trend is constructive — 4 of 4 moving averages reclaimed",
+    "reasoning": "The Nifty is at 25,155, above 4 of its four reference moving averages, with RSI at 100. That RSI is stretched, so momentum is worth fading rather than chasing.",
+    "sources": [
+      "Nifty 25,155",
+      "RSI 100",
+      "4/4 EMAs reclaimed"
+    ]
+  },
+  {
+    "agentId": "macro",
+    "tilt": {
+      "equity": 0.07999999999999997,
+      "gold": -0.09333333333333331,
+      "bonds": -0.05333333333333332
+    },
+    "confidence": 0.4,
+    "headline": "Volatility contained — India VIX at 13.4",
+    "reasoning": "India VIX is 13.4 against a long-run mid-teens average. Option markets are calm, which removes the case for defensive positioning on volatility grounds alone.",
+    "sources": [
+      "India VIX 13.4",
+      "Trend bullish"
+    ]
+  },
+  {
+    "agentId": "bonds",
+    "tilt": {
+      "bonds": -0.6400000000000001,
+      "fd": -0.4,
+      "equity": 0.4,
+      "mutual_fund": 0.4
+    },
+    "confidence": 0.75,
+    "headline": "Nearest goal is 9 years away — duration risk is affordable",
+    "reasoning": "The binding constraint is the nearest goal, 9 years out, not the longest one. That is long enough to ride out a normal cycle, so fixed income can play a diversifying rather than a protective role.",
+    "sources": [
+      "Nearest goal 9y",
+      "Target corpus ₹80,00,000"
+    ]
+  },
+  {
+    "agentId": "gold",
+    "tilt": {
+      "gold": -0.21519999999999995
+    },
+    "confidence": 0.6,
+    "headline": "Gold at 8% — hedge is adequate",
+    "reasoning": "Gold is 8% of the portfolio against a 5% hedging allocation for current conditions. It is held for its behaviour when equities fall, not for its own return, so the position is sized rather than maximised.",
+    "sources": [
+      "Gold held 8%",
+      "India VIX 13.4"
+    ]
+  },
+  {
+    "agentId": "behaviour",
+    "tilt": {
+      "cash": 0.2,
+      "equity": -0.12
+    },
+    "confidence": 0.6,
+    "headline": "Saving 0% of income — keep the plan simple",
+    "reasoning": "About 0% of income is reaching investments, and the largest spending category is 41% of monthly outgoings (NEFT/ZERODHA BROKING/ONLINE). At that rate, a plan that demands regular top-ups is unlikely to survive a bad month — simplicity beats optimisation.",
+    "sources": [
+      "Savings rate 0%",
+      "Top spend NEFT/ZERODHA BROKING/ONLINE"
+    ]
+  },
+  {
+    "agentId": "tax",
+    "tilt": {
+      "mutual_fund": 0.15,
+      "fd": -0.1
+    },
+    "confidence": 0.5,
+    "headline": "Up to ₹45,000 of tax available this year",
+    "reasoning": "Purchase dates are not in the bank's data, so holding periods and cost basis cannot be computed — the gains work needs a portfolio import first. What can be said: ₹1,50,000 of 80C headroom is unused, worth up to ₹45,000 under the old regime, and roughly ₹35,000 a year of deposit interest is taxed at your full 30% slab.",
+    "sources": [
+      "Rates: FY 2026-27 (Budget 2025 rates)",
+      "No cost basis available",
+      "Deposit interest taxed at 30%"
+    ]
+  }
+]

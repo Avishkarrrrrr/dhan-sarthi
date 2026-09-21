@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Customer, Holding } from "@/lib/data/types";
 import { aggregate, sourceLabel } from "@/lib/aggregate";
+import { toPositions } from "@/lib/aggregate/positions";
 
 function customer(holdings: Holding[], transactions = 0): Customer {
   return {
@@ -85,5 +86,74 @@ describe("aggregation", () => {
       expect(sourceLabel(s.kind)).toBeTruthy();
       expect(sourceLabel(s.kind)).not.toBe(s.kind);
     }
+  });
+});
+
+/*
+ * A projection over the holdings, not a second copy of them. Keeping both as
+ * stored state is how the typed shape and the holdings end up disagreeing.
+ */
+describe("typed positions", () => {
+  const rich = customer(
+    [
+      { assetClass: "cash", name: "IDBI Savings Account 660100100003", value: 55_780, lienAmount: 5000 },
+      { assetClass: "fd", name: "IDBI Fixed Deposit", value: 10_000 },
+      {
+        assetClass: "equity",
+        name: "Infosys",
+        symbol: "INFY",
+        value: 41_540,
+        quantity: 40,
+        lots: [{ acquiredOn: "2025-03-14", quantity: 40, costPerUnit: 820 }],
+      },
+      { assetClass: "mutual_fund", name: "Nifty 50 Index Fund", value: 120_000 },
+      { assetClass: "gold", name: "Sovereign Gold Bonds", value: 50_000 },
+      { assetClass: "bonds", name: "Public Provident Fund", value: 30_000 },
+    ],
+    5,
+  );
+
+  it("prices equity against the live quote, and P&L against what was paid", () => {
+    const p = toPositions(rich, { INFY: { ltp: 1038.5, dayChangePct: -1.23 } });
+    const infy = p.equity[0];
+    expect(infy.avgPrice).toBe(820);
+    expect(infy.lastPrice).toBe(1038.5);
+    expect(infy.invested).toBe(32_800);
+    expect(infy.currentValue).toBe(41_540);
+    expect(infy.pnl).toBe(8_740);
+    expect(infy.dayChangePct).toBe(-1.23);
+  });
+
+  it("falls back to the source's own value when there is no quote", () => {
+    const p = toPositions(rich);
+    expect(p.equity[0].currentValue).toBe(41_540);
+    expect(p.equity[0].dayChangePct).toBeUndefined();
+  });
+
+  it("splits a deposit into what is locked and what is investible", () => {
+    const savings = toPositions(rich).deposits[0];
+    expect(savings.kind).toBe("SAVINGS");
+    expect(savings.lienMarked).toBe(5000);
+    expect(savings.investible).toBe(50_780);
+  });
+
+  /* A full account number has no business leaving the server. */
+  it("masks the account number", () => {
+    expect(toPositions(rich).deposits[0].accountNo).toBe("••••0003");
+  });
+
+  it("labels a fund as the look-through models it, so both agree", () => {
+    expect(toPositions(rich).mutualFunds[0].category).toBe("Nifty 50 index");
+  });
+
+  it("recognises the form gold is held in", () => {
+    expect(toPositions(rich).gold[0].form).toBe("sgb");
+  });
+
+  it("rides along with the aggregation", () => {
+    const r = aggregate(rich, true);
+    expect(r.positions.equity).toHaveLength(1);
+    expect(r.positions.deposits).toHaveLength(2);
+    expect(r.positions.bonds[0].name).toBe("Public Provident Fund");
   });
 });

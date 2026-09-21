@@ -1,0 +1,37 @@
+{
+  "monthlySip": 50000,
+  "annualStepUpPct": 10,
+  "horizonYears": 15,
+  "targetCorpus": 20000000,
+  "riskProfile": "moderate",
+  "goals": [
+    {
+      "id": "short-0",
+      "label": "a car",
+      "targetAmount": 0,
+      "targetYear": 2028,
+      "current": 0
+    },
+    {
+      "id": "short-1",
+      "label": "an emergency fund",
+      "targetAmount": 0,
+      "targetYear": 2028,
+      "current": 0
+    },
+    {
+      "id": "long-0",
+      "label": "retirement",
+      "targetAmount": 0,
+      "targetYear": 2041,
+      "current": 0
+    },
+    {
+      "id": "long-1",
+      "label": "daughter's education",
+      "targetAmount": 0,
+      "targetYear": 2041,
+      "current": 0
+    }
+  ]
+}

@@ -107,6 +107,73 @@ export interface InvestmentPolicyStatement {
 
 // ============ STAGE 1 — AGGREGATE ============
 
+/**
+ * The six asset kinds, typed.
+ *
+ * A projection over the flat `Holding[]` the rest of the app reads, not a
+ * replacement for it. Everything downstream — allocation, the look-through,
+ * compliance, tax — is written against holdings and works; rewriting that the
+ * night before a submission would be a lot of risk for no visible change. What
+ * this adds is a shape an API consumer can read without knowing our internals,
+ * which is what the contract was for.
+ */
+export interface EquityPosition {
+  symbol: string;
+  name: string;
+  isin?: string;
+  quantity: number;
+  avgPrice: number;
+  /** Live, where the quote feed answered. Falls back to the average paid. */
+  lastPrice: number;
+  invested: number;
+  currentValue: number;
+  pnl: number;
+  pnlPct: number;
+  dayChangePct?: number;
+  sector?: string;
+  lots?: TaxLot[];
+}
+
+export interface MfHolding {
+  schemeName: string;
+  /** What the look-through modelled it as — "Nifty 50 index", "Small-cap". */
+  category: string;
+  units?: number;
+  nav?: number;
+  invested?: number;
+  currentValue: number;
+  lots?: TaxLot[];
+}
+
+export interface DepositAccount {
+  kind: "FD" | "RD" | "SAVINGS";
+  /** Masked. A full account number has no business leaving the server. */
+  accountNo: string;
+  currentValue: number;
+  /** IDBI API 362 — locked, and therefore not investible. */
+  lienMarked: number;
+  investible: number;
+}
+
+export interface BondHolding {
+  name: string;
+  currentValue: number;
+}
+
+export interface GoldHolding {
+  form: "physical" | "sgb" | "etf" | "digital";
+  name: string;
+  currentValue: number;
+}
+
+export interface TypedPositions {
+  deposits: DepositAccount[];
+  equity: EquityPosition[];
+  mutualFunds: MfHolding[];
+  bonds: BondHolding[];
+  gold: GoldHolding[];
+}
+
 /** The kinds of thing a customer's money can be in. */
 export type SourceKind = "bank" | "deposits" | "spending" | "equity" | "mf" | "bonds" | "gold";
 
@@ -123,6 +190,8 @@ export interface SourceStatus {
 
 export interface AggregationResult {
   snapshot: FinancialSnapshot;
+  /** The same holdings, typed by asset kind. */
+  positions: TypedPositions;
   sources: SourceStatus[];
   /** 0..1 — how much of the picture we actually have. */
   completeness: number;

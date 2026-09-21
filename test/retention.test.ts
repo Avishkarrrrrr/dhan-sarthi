@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import type { Customer, Transaction } from "@/lib/data/types";
+import type { Customer, Holding, Transaction } from "@/lib/data/types";
 import { buildSnapshot } from "@/lib/contracts/snapshot";
 import { classifyCounterparty } from "@/lib/finance/counterparty";
 import { detectOutflows, SIGNAL_MIN_AMOUNT } from "@/lib/agents/retention";
@@ -8,7 +8,7 @@ import * as queue from "@/lib/hitl/queue";
 
 beforeEach(() => queue.reset());
 
-function customer(transactions: Transaction[], holdings = [{ assetClass: "cash" as const, name: "Savings", value: 1_000_000 }]): Customer {
+function customer(transactions: Transaction[], holdings: Holding[] = [{ assetClass: "cash", name: "Savings", value: 1_000_000 }]): Customer {
   return {
     id: "t",
     name: "Test Person",
@@ -131,5 +131,36 @@ describe("raising the alert", () => {
     // Either it passed compliance, or it was withheld with a reason. What must
     // never happen is an unvetted product reaching the RM.
     expect(ticket!.actions.length === 0 || ticket!.retention!.counterOffer.length > 0).toBe(true);
+  });
+});
+
+/*
+ * Deposit flight is about deposits. Against net worth, a customer moving ₹4.5
+ * lakh out of an ₹11 lakh deposit relationship scores 10% and looks fine —
+ * because the denominator included the shares they already hold elsewhere.
+ */
+describe("what the risk is measured against", () => {
+  const leaving = [
+    debit("NEFT/ZERODHA BROKING", 150_000, "2026-06-01"),
+    debit("NEFT/ZERODHA BROKING", 150_000, "2026-07-01"),
+    debit("NEFT/ZERODHA BROKING", 150_000, "2026-08-01"),
+  ];
+
+  it("ignores assets held away from the bank", () => {
+    const c = customer(leaving, [
+      { assetClass: "cash", name: "Savings", value: 600_000 },
+      { assetClass: "fd", name: "Business reserve FD", value: 500_000 },
+      { assetClass: "equity", name: "Direct stocks", value: 2_700_000 },
+    ]);
+    const insight = detectOutflows(buildSnapshot(c));
+    // ₹4.5L of an ₹11L deposit relationship, recurring.
+    expect(insight.signals[0].pctOfBalance).toBeCloseTo(0.409, 2);
+    expect(insight.attritionRisk).toBeGreaterThan(0.6);
+    expect(raiseRetentionAlert(buildSnapshot(c))).not.toBeNull();
+  });
+
+  it("falls back to net worth when nothing is held with the bank", () => {
+    const c = customer(leaving, [{ assetClass: "equity", name: "Direct stocks", value: 1_000_000 }]);
+    expect(detectOutflows(buildSnapshot(c)).attritionRisk).toBeGreaterThan(0);
   });
 });

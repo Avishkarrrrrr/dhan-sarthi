@@ -5,6 +5,7 @@ import type {
   SourceStatus,
 } from "@/lib/contracts/types";
 import { buildSnapshot } from "@/lib/contracts/snapshot";
+import { toPositions } from "./positions";
 
 /**
  * Stage 1: the 360° picture, and an honest account of how much of it we have.
@@ -113,6 +114,7 @@ export function aggregate(customer: Customer, live: boolean, now = new Date()): 
   const linked = sources.filter((s) => s.status === "linked");
   return {
     snapshot: buildSnapshot(customer, now),
+    positions: toPositions(customer),
     sources,
     completeness: Math.round((linked.length / KINDS.length) * 100) / 100,
     missing: sources.filter((s) => s.status !== "linked").map((s) => s.kind),

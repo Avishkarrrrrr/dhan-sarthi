@@ -1,0 +1,474 @@
+{
+  "snapshot": {
+    "customer": {
+      "id": "rajesh",
+      "name": "Rajesh Kumar",
+      "age": 45,
+      "persona": "Small business owner, Jaipur",
+      "city": "Jaipur",
+      "monthlyIncome": 260000,
+      "riskProfile": "aggressive",
+      "holdings": [
+        {
+          "assetClass": "equity",
+          "name": "Direct stocks (mid & small cap)",
+          "value": 1800000
+        },
+        {
+          "assetClass": "mutual_fund",
+          "name": "Small-cap Fund",
+          "value": 900000
+        },
+        {
+          "assetClass": "mutual_fund",
+          "name": "ELSS Tax Saver",
+          "value": 400000
+        },
+        {
+          "assetClass": "fd",
+          "name": "Business reserve FD",
+          "value": 500000
+        },
+        {
+          "assetClass": "gold",
+          "name": "Physical + digital gold",
+          "value": 350000
+        },
+        {
+          "assetClass": "cash",
+          "name": "Current + savings",
+          "value": 600000
+        }
+      ],
+      "transactions": [
+        {
+          "date": "2026-05-01",
+          "category": "Salary / Income",
+          "amount": 260000
+        },
+        {
+          "date": "2026-05-03",
+          "category": "Business expenses",
+          "amount": -60000
+        },
+        {
+          "date": "2026-05-05",
+          "category": "Home loan EMI",
+          "amount": -45000
+        },
+        {
+          "date": "2026-05-07",
+          "category": "Groceries",
+          "amount": -18000
+        },
+        {
+          "date": "2026-05-09",
+          "category": "Dining / Entertainment",
+          "amount": -22000
+        },
+        {
+          "date": "2026-05-11",
+          "category": "SIP / Investments",
+          "amount": -40000
+        },
+        {
+          "date": "2026-05-13",
+          "category": "Shopping",
+          "amount": -20000
+        },
+        {
+          "date": "2026-05-15",
+          "category": "Travel",
+          "amount": -15000
+        },
+        {
+          "date": "2026-05-17",
+          "category": "NEFT/ZERODHA BROKING/ONLINE",
+          "amount": -150000
+        },
+        {
+          "date": "2026-06-01",
+          "category": "Salary / Income",
+          "amount": 260000
+        },
+        {
+          "date": "2026-06-03",
+          "category": "Business expenses",
+          "amount": -60000
+        },
+        {
+          "date": "2026-06-05",
+          "category": "Home loan EMI",
+          "amount": -45000
+        },
+        {
+          "date": "2026-06-07",
+          "category": "Groceries",
+          "amount": -18000
+        },
+        {
+          "date": "2026-06-09",
+          "category": "Dining / Entertainment",
+          "amount": -22000
+        },
+        {
+          "date": "2026-06-11",
+          "category": "SIP / Investments",
+          "amount": -40000
+        },
+        {
+          "date": "2026-06-13",
+          "category": "Shopping",
+          "amount": -20000
+        },
+        {
+          "date": "2026-06-15",
+          "category": "Travel",
+          "amount": -15000
+        },
+        {
+          "date": "2026-06-17",
+          "category": "NEFT/ZERODHA BROKING/ONLINE",
+          "amount": -150000
+        },
+        {
+          "date": "2026-07-01",
+          "category": "Salary / Income",
+          "amount": 260000
+        },
+        {
+          "date": "2026-07-03",
+          "category": "Business expenses",
+          "amount": -60000
+        },
+        {
+          "date": "2026-07-05",
+          "category": "Home loan EMI",
+          "amount": -45000
+        },
+        {
+          "date": "2026-07-07",
+          "category": "Groceries",
+          "amount": -18000
+        },
+        {
+          "date": "2026-07-09",
+          "category": "Dining / Entertainment",
+          "amount": -22000
+        },
+        {
+          "date": "2026-07-11",
+          "category": "SIP / Investments",
+          "amount": -40000
+        },
+        {
+          "date": "2026-07-13",
+          "category": "Shopping",
+          "amount": -20000
+        },
+        {
+          "date": "2026-07-15",
+          "category": "Travel",
+          "amount": -15000
+        },
+        {
+          "date": "2026-07-17",
+          "category": "NEFT/ZERODHA BROKING/ONLINE",
+          "amount": -150000
+        }
+      ],
+      "goals": [
+        {
+          "id": "rajesh-child",
+          "label": "Child's higher education",
+          "targetAmount": 8000000,
+          "targetYear": 2035,
+          "current": 1200000
+        },
+        {
+          "id": "rajesh-retire",
+          "label": "Retirement corpus",
+          "targetAmount": 60000000,
+          "targetYear": 2046,
+          "current": 4550000
+        }
+      ]
+    },
+    "netWorth": 4550000,
+    "allocationByClass": {
+      "equity": 0.3956,
+      "mutual_fund": 0.2857,
+      "bonds": 0,
+      "fd": 0.1099,
+      "gold": 0.0769,
+      "cash": 0.1319
+    },
+    "xray": {
+      "byStock": [
+        {
+          "name": "HDFC Bank",
+          "weight": 0.0058
+        },
+        {
+          "name": "ICICI Bank",
+          "weight": 0.005
+        },
+        {
+          "name": "Reliance Industries",
+          "weight": 0.0038
+        },
+        {
+          "name": "Infosys",
+          "weight": 0.0033
+        },
+        {
+          "name": "Axis Bank",
+          "weight": 0.0025
+        },
+        {
+          "name": "Bharti Airtel",
+          "weight": 0.0023
+        },
+        {
+          "name": "Larsen & Toubro",
+          "weight": 0.0021
+        },
+        {
+          "name": "State Bank of India",
+          "weight": 0.0018
+        },
+        {
+          "name": "Tata Consultancy Services",
+          "weight": 0.0017
+        },
+        {
+          "name": "Bajaj Finance",
+          "weight": 0.0015
+        }
+      ],
+      "bySector": [
+        {
+          "sector": "Financial Services",
+          "weight": 0.1523
+        },
+        {
+          "sector": "Capital Goods",
+          "weight": 0.1482
+        },
+        {
+          "sector": "Healthcare",
+          "weight": 0.1147
+        },
+        {
+          "sector": "Chemicals",
+          "weight": 0.0921
+        },
+        {
+          "sector": "Consumer Services",
+          "weight": 0.0847
+        },
+        {
+          "sector": "Information Technology",
+          "weight": 0.0839
+        },
+        {
+          "sector": "Automobile",
+          "weight": 0.0713
+        },
+        {
+          "sector": "Other",
+          "weight": 0.0587
+        },
+        {
+          "sector": "Realty",
+          "weight": 0.0521
+        },
+        {
+          "sector": "Metals & Mining",
+          "weight": 0.0474
+        },
+        {
+          "sector": "Power & Utilities",
+          "weight": 0.0387
+        },
+        {
+          "sector": "Textiles",
+          "weight": 0.0347
+        },
+        {
+          "sector": "FMCG",
+          "weight": 0.0079
+        },
+        {
+          "sector": "Oil & Gas",
+          "weight": 0.0079
+        },
+        {
+          "sector": "Telecom",
+          "weight": 0.0053
+        }
+      ],
+      "overlapPct": 0,
+      "concentrationFlags": [],
+      "effectiveEquityPct": 0.6354,
+      "headlineEquityPct": 0.6813,
+      "unclassifiedPct": 0,
+      "stockCoverage": 0.0471,
+      "vehicles": [
+        {
+          "name": "Direct stocks (mid & small cap)",
+          "value": 1800000,
+          "category": "Small-cap equity",
+          "equityValue": 1674000,
+          "classified": true
+        },
+        {
+          "name": "Small-cap Fund",
+          "value": 900000,
+          "category": "Small-cap equity",
+          "equityValue": 837000,
+          "classified": true
+        },
+        {
+          "name": "ELSS Tax Saver",
+          "value": 400000,
+          "category": "ELSS (tax-saving equity)",
+          "equityValue": 380000,
+          "classified": true
+        }
+      ],
+      "asOf": "June 2025",
+      "source": "Indicative category models from published NSE Nifty 50 index weights and AMFI category averages. Not a live holdings feed — the sandbox has no holdings API."
+    },
+    "investableSurplus": 0,
+    "ips": {
+      "monthlySip": 0,
+      "annualStepUpPct": 10,
+      "horizonYears": 9,
+      "targetCorpus": 8000000,
+      "riskProfile": "aggressive",
+      "goals": [
+        {
+          "id": "rajesh-child",
+          "label": "Child's higher education",
+          "targetAmount": 8000000,
+          "targetYear": 2035,
+          "current": 1200000
+        },
+        {
+          "id": "rajesh-retire",
+          "label": "Retirement corpus",
+          "targetAmount": 60000000,
+          "targetYear": 2046,
+          "current": 4550000
+        }
+      ]
+    }
+  },
+  "positions": {
+    "deposits": [
+      {
+        "kind": "FD",
+        "accountNo": "Business reserve FD",
+        "currentValue": 500000,
+        "lienMarked": 0,
+        "investible": 500000
+      },
+      {
+        "kind": "SAVINGS",
+        "accountNo": "Current + savings",
+        "currentValue": 600000,
+        "lienMarked": 0,
+        "investible": 600000
+      }
+    ],
+    "equity": [
+      {
+        "symbol": "",
+        "name": "Direct stocks (mid & small cap)",
+        "quantity": 0,
+        "avgPrice": 0,
+        "lastPrice": 0,
+        "invested": 0,
+        "currentValue": 1800000,
+        "pnl": 1800000,
+        "pnlPct": 0
+      }
+    ],
+    "mutualFunds": [
+      {
+        "schemeName": "Small-cap Fund",
+        "category": "Small-cap equity",
+        "currentValue": 900000
+      },
+      {
+        "schemeName": "ELSS Tax Saver",
+        "category": "ELSS (tax-saving equity)",
+        "currentValue": 400000
+      }
+    ],
+    "bonds": [],
+    "gold": [
+      {
+        "form": "digital",
+        "name": "Physical + digital gold",
+        "currentValue": 350000
+      }
+    ]
+  },
+  "sources": [
+    {
+      "kind": "bank",
+      "provider": "Demo data",
+      "status": "linked",
+      "itemCount": 1,
+      "lastSyncedAt": "2026-09-21T14:28:46.386Z"
+    },
+    {
+      "kind": "deposits",
+      "provider": "Demo data",
+      "status": "linked",
+      "itemCount": 1,
+      "lastSyncedAt": "2026-09-21T14:28:46.386Z"
+    },
+    {
+      "kind": "spending",
+      "provider": "Demo data",
+      "status": "linked",
+      "itemCount": 27,
+      "lastSyncedAt": "2026-09-21T14:28:46.386Z"
+    },
+    {
+      "kind": "equity",
+      "provider": "Added by you",
+      "status": "linked",
+      "itemCount": 1,
+      "lastSyncedAt": "2026-09-21T14:28:46.386Z"
+    },
+    {
+      "kind": "mf",
+      "provider": "Added by you",
+      "status": "linked",
+      "itemCount": 2,
+      "lastSyncedAt": "2026-09-21T14:28:46.386Z"
+    },
+    {
+      "kind": "bonds",
+      "provider": "Added by you",
+      "status": "skipped",
+      "itemCount": 0,
+      "note": "IDBI's APIs carry no holdings data — add these yourself and the whole picture completes."
+    },
+    {
+      "kind": "gold",
+      "provider": "Added by you",
+      "status": "linked",
+      "itemCount": 1,
+      "lastSyncedAt": "2026-09-21T14:28:46.386Z"
+    }
+  ],
+  "completeness": 0.86,
+  "missing": [
+    "bonds"
+  ]
+}

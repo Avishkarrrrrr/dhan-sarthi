@@ -38,7 +38,21 @@ function severity(share: number, recurring: boolean): OutflowSignal["severity"] 
 
 export function detectOutflows(snapshot: FinancialSnapshot): RetentionInsight {
   const txns: Transaction[] = snapshot.customer.transactions ?? [];
-  const balance = Math.max(1, snapshot.netWorth);
+
+  /*
+   * Measured against the balances held *with this bank*, not the customer's
+   * whole net worth.
+   *
+   * Deposit flight is about deposits. Against net worth, a customer moving
+   * ₹4.5 lakh out of an ₹11 lakh deposit relationship scores 10% and looks
+   * fine, because the denominator included the ₹27 lakh of shares they hold at
+   * a broker — money that already left. The share the bank is losing is the
+   * number that matters, and by that measure the same customer is 41% gone.
+   */
+  const withUs = (snapshot.customer.holdings ?? [])
+    .filter((h) => h.assetClass === "cash" || h.assetClass === "fd")
+    .reduce((s, h) => s + h.value, 0);
+  const balance = Math.max(1, withUs || snapshot.netWorth);
 
   /*
    * Group by destination rather than by transaction. One ₹50,000 transfer is a

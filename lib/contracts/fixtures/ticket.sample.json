@@ -1,0 +1,68 @@
+{
+  "kind": "advice_approval",
+  "reason": "high_value",
+  "customerId": "rajesh",
+  "proposed": {
+    "weights": {
+      "equity": 0.1703,
+      "mutual_fund": 0.2602,
+      "bonds": 0.0487,
+      "fd": 0.1894,
+      "gold": 0.033,
+      "cash": 0.2984
+    },
+    "expectedReturnPct": 8.3,
+    "volatilityPct": 7.5,
+    "rationale": "Adjusted to stay within the suitability limits for a aggressive investor: growth assets capped, defensive holdings and the emergency buffer restored. Original rationale: Starting from the aggressive house model, the committee adjusted bonds and cash. The strongest view came from the treasury desk: liquidity cover is 3.0 months — build it before adding risk.",
+    "contributingViews": [
+      "treasury",
+      "markets",
+      "macro",
+      "bonds",
+      "gold",
+      "behaviour",
+      "tax"
+    ]
+  },
+  "actions": [
+    {
+      "kind": "sell",
+      "instrument": "Blue-chip stocks",
+      "amount": 1025115,
+      "reason": "Brings direct equity down from 40% to 17%, which is what funds the rest."
+    },
+    {
+      "kind": "sell",
+      "instrument": "Nifty 50 Index Fund",
+      "amount": 116025,
+      "reason": "Brings mutual funds down from 29% to 26%, which is what funds the rest."
+    },
+    {
+      "kind": "sell",
+      "instrument": "Sovereign Gold Bonds",
+      "amount": 199745,
+      "reason": "Brings gold down from 8% to 3%, which is what funds the rest."
+    },
+    {
+      "kind": "buy",
+      "instrument": "Short-duration debt fund",
+      "amount": 221585,
+      "reason": "Takes bonds from 0% to 5% of the portfolio."
+    },
+    {
+      "kind": "buy",
+      "instrument": "IDBI Fixed Deposit",
+      "amount": 361725,
+      "reason": "Takes fixed deposits from 11% to 19% of the portfolio."
+    },
+    {
+      "kind": "buy",
+      "instrument": "IDBI Savings Account",
+      "amount": 757575,
+      "reason": "Takes cash from 13% to 30% of the portfolio."
+    }
+  ],
+  "id": "ESC-48D2606A",
+  "createdAt": "2026-09-21T14:28:46.400Z",
+  "status": "pending"
+}
