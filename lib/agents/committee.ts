@@ -4,6 +4,7 @@ import { DISCLAIMERS } from "@/lib/compliance/guardrails";
 import { ASSET_CLASSES, type AgentView, type CommitteeEvent, type FinancialSnapshot } from "@/lib/contracts/types";
 import { COMMITTEE } from "./agents";
 import { strategise } from "./strategist";
+import { optimiseTax } from "./tax";
 
 /**
  * Runs the investment committee and streams what happens.
@@ -38,6 +39,14 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
     yield { type: "agent_view", view };
   }
 
+  /*
+   * The tax desk's full working, computed once. It rides alongside the
+   * allocation rather than inside it: an ELSS suggestion is still a product
+   * recommendation, so it goes through the same compliance pipeline and lands
+   * on the same audit entry as everything else.
+   */
+  const tax = optimiseTax(snapshot);
+
   const allocation = strategise(views, snapshot);
   yield { type: "strategist", allocation };
 
@@ -49,6 +58,7 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
     views,
     confidence,
     tiltSpread: tiltSpread(views),
+    tax,
   });
 
   yield { type: "compliance", verdict: result.verdict };
@@ -60,6 +70,7 @@ export async function* runCommittee(input: CommitteeInput): AsyncGenerator<Commi
       // Never the proposal when compliance replaced it.
       allocation: result.finalAllocation,
       actions: result.actions,
+      tax,
       spokenText: result.spokenText,
       disclaimers: DISCLAIMERS,
       auditId: result.audit.auditId,

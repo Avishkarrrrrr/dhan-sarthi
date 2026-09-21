@@ -1,4 +1,5 @@
 import type { MarketSnapshot } from "@/lib/market/nifty";
+import { tax } from "./tax";
 import { monthlyExpenses } from "@/lib/contracts/snapshot";
 import { spendingInsights } from "@/lib/finance/metrics";
 import { isPlaceholderCategory } from "@/lib/finance/category";
@@ -213,6 +214,7 @@ export const COMMITTEE: { id: AgentId; agent: Agent }[] = [
   { id: "bonds", agent: bonds },
   { id: "gold", agent: gold },
   { id: "behaviour", agent: behaviour },
+  { id: "tax", agent: tax },
 ];
 
 function inr(n: number): string {

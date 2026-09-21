@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { ActionCard } from "./ActionCard";
+import { TaxPanel } from "./TaxPanel";
 import { useRef, useState } from "react";
 import type { AssetClass } from "@/lib/data/types";
 import type {
@@ -301,6 +302,12 @@ export function CommitteeRoom({ customerId, riskProfile }: { customerId: string;
         above nothing else: they approve what the bank is willing to recommend,
         not the proposal compliance refused.
       */}
+      {answer?.tax && (
+        <div className="mt-3">
+          <TaxPanel tax={answer.tax} />
+        </div>
+      )}
+
       {answer && answer.actions?.length > 0 && (
         <div className="mt-3">
           <ActionCard actions={answer.actions} auditId={answer.auditId} escalated={!!ticket} />

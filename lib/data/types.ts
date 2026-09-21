@@ -1,10 +1,25 @@
 export type AssetClass = "equity" | "mutual_fund" | "bonds" | "fd" | "gold" | "cash";
 
+/** One purchase. Without an acquisition date there is no holding period. */
+export interface TaxLot {
+  acquiredOn: string; // ISO date
+  quantity: number;
+  costPerUnit: number;
+}
+
 /** A single holding. `value` is current market value in INR. */
 export interface Holding {
   assetClass: AssetClass;
   name: string;
   value: number;
+  /** Units held, where the source knows them. Needed to price a lot. */
+  quantity?: number;
+  /**
+   * Purchase history. Optional because a bank feed does not carry it and a CAS
+   * carries it only for funds — the tax desk says what it cannot compute
+   * rather than assuming a cost basis.
+   */
+  lots?: TaxLot[];
 }
 
 /** A transaction. `amount` > 0 is a credit (income), < 0 is a debit (spend). */

@@ -6,6 +6,7 @@ import type {
   EscalationTicket,
   FinancialSnapshot,
   ProposedAction,
+  TaxOptimization,
   Violation,
 } from "@/lib/contracts/types";
 import { proposeActions } from "@/lib/actions/propose";
@@ -39,6 +40,8 @@ export interface PipelineInput {
   confidence?: number;
   /** Spread between the most and least bullish desk, feeds the same gate. */
   tiltSpread?: number;
+  /** The tax desk's working, recorded with everything else. */
+  tax?: TaxOptimization;
 }
 
 export interface PipelineResult {
@@ -127,6 +130,7 @@ export function run(input: PipelineInput): PipelineResult {
     actions,
     verdict,
     hitl: ticket ?? undefined,
+    tax: input.tax,
     finalSpokenText: safeText,
   });
 
