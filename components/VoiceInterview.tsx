@@ -101,7 +101,8 @@ export function VoiceInterview({
     [state, busy, done, language, onComplete],
   );
 
-  const { isRecording, isSpeaking, startRecording, stopRecording, speak } = useVoice(send);
+  const { isRecording, isSpeaking, startRecording, stopRecording, speak, stopSpeaking } =
+    useVoice(send);
 
   // Open the conversation once.
   useEffect(() => {
@@ -220,10 +221,16 @@ export function VoiceInterview({
       {/* Answer by voice or by typing. Never only by voice. */}
       <div className="flex items-center gap-2 border-t border-brand-light p-3">
         <button
-          onClick={() => (isRecording ? stopRecording() : startRecording(language))}
+          onClick={() => {
+            if (isRecording) return stopRecording();
+            // Barge-in: a customer who starts answering should not have to
+            // wait politely for the avatar to finish its sentence.
+            if (isSpeaking) stopSpeaking();
+            startRecording(language);
+          }}
           disabled={busy || done}
           aria-label={isRecording ? "Stop recording" : "Answer by voice"}
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
+          className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
             isRecording ? "bg-red-500 text-white" : "bg-brand-green text-white"
           }`}
         >
@@ -234,9 +241,19 @@ export function VoiceInterview({
           onChange={(e) => setTyped(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send(typed)}
           disabled={busy || done}
-          placeholder={done ? "Plan confirmed" : isSpeaking ? "Listening after I finish…" : "…or type your answer"}
+          placeholder={done ? "Plan confirmed" : "…or type your answer"}
           className="flex-1 rounded-xl border border-brand-light bg-surface px-3 py-2.5 text-sm outline-none focus:border-brand-green disabled:opacity-60"
         />
+        {isSpeaking && (
+          <button
+            onClick={stopSpeaking}
+            aria-label="Stop speaking"
+            className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-brand-light px-3 text-[11px] font-medium text-ink/60"
+          >
+            <Square className="h-3 w-3" />
+            Skip
+          </button>
+        )}
         <button
           onClick={() => send(typed)}
           disabled={busy || done || !typed.trim()}

@@ -23,7 +23,7 @@ import type {
   TicketKind,
 } from "@/lib/contracts/types";
 import { fetchAuditTrail, fetchRmQueue, postRmDecision } from "@/lib/client/api";
-import { ACTION_VERB, ASSET_LABELS, inr } from "@/lib/format";
+import { actionPhrase, ASSET_LABELS, inr } from "@/lib/format";
 
 /**
  * The relationship manager's console.
@@ -117,11 +117,14 @@ export default function RmConsole() {
    * everyone rather than one at a time.
    */
   const [scanning, setScanning] = useState(false);
+  const [scanSummary, setScanSummary] = useState<string | null>(null);
   const scan = async () => {
     setScanning(true);
     try {
       const res = await fetch("/api/rm/scan", { method: "POST" });
       if (!res.ok) throw new Error(`scan ${res.status}`);
+      const json = await res.json();
+      setScanSummary(json.summary ?? null);
       await refresh();
       setTab("retention_alert");
       setError(null);
@@ -161,7 +164,14 @@ export default function RmConsole() {
     tickets.filter((t) => (t.kind ?? "advice_approval") === k && t.status === "pending").length;
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl p-6 lg:p-10">
+    /*
+     * Its own ground. The customer app sits on a green gradient because it is
+     * a device on a desk; a bank's internal console is a document, and white
+     * behind white cards made the empty states read as broken rather than
+     * empty.
+     */
+    <main className="min-h-screen bg-[#FBFCFB] p-6 lg:p-10">
+      <div className="mx-auto max-w-5xl">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-brand-light pb-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-green">
@@ -252,6 +262,11 @@ export default function RmConsole() {
             <h2 className="mb-3 text-sm font-semibold text-brand-deep">
               Awaiting decision{pending.length > 0 && ` · ${pending.length}`}
             </h2>
+            {tab === "retention_alert" && scanSummary && (
+              <p className="mb-3 rounded-xl border border-brand-light bg-white px-3 py-2 text-xs leading-relaxed text-ink/70">
+                {scanSummary}
+              </p>
+            )}
             {pending.length === 0 ? (
               <EmptyState kind={tab} />
             ) : (
@@ -331,6 +346,7 @@ export default function RmConsole() {
           </section>
         </div>
       )}
+      </div>
     </main>
   );
 }
@@ -378,15 +394,22 @@ function TicketCard({
 
       {ticket.proposed && (
         <>
+          {/*
+            What the RM is actually signing for. When compliance rewrote the
+            proposal this is the rewritten one — the bank is being asked to
+            stand behind what it would recommend, not behind the thing its own
+            rules just refused. The original wording survives inside the
+            rationale below.
+          */}
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink/45">
-            Proposal as submitted
+            What the bank would recommend
           </p>
           <WeightBar allocation={ticket.proposed} />
           <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-[11px] italic leading-relaxed text-ink/70">
             “{ticket.proposed.rationale}”
           </p>
           <p className="mt-1.5 text-[10px] text-ink/45">
-            Claimed return {ticket.proposed.expectedReturnPct}% · volatility{" "}
+            Expected return {ticket.proposed.expectedReturnPct}% · volatility{" "}
             {ticket.proposed.volatilityPct}%
           </p>
         </>
@@ -434,7 +457,7 @@ function ActionList({ actions }: { actions: ProposedAction[] }) {
           <li key={i} className="rounded-lg border border-brand-light px-3 py-2">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-xs font-semibold text-brand-deep">
-                {ACTION_VERB[a.kind]} {a.instrument}
+                {actionPhrase(a)}
               </span>
               <span className="shrink-0 text-xs font-semibold tabular-nums text-ink">
                 {inr(a.amount)}

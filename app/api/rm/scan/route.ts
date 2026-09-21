@@ -3,6 +3,7 @@ import { buildSnapshot } from "@/lib/contracts/snapshot";
 import { selectSource } from "@/lib/integrations/source";
 import { raiseRetentionAlert } from "@/lib/hitl/retention";
 import { detectOutflows } from "@/lib/agents/retention";
+import { classifyCounterparty } from "@/lib/finance/counterparty";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,13 @@ export async function POST(req: NextRequest) {
     ? [body.customerId]
     : (await source.listCustomers()).map((c) => c.id);
 
-  const scanned: { customerId: string; attritionRisk: number; ticketId?: string }[] = [];
+  const scanned: {
+    customerId: string;
+    attritionRisk: number;
+    narrated: boolean;
+    ticketId?: string;
+  }[] = [];
+
   for (const id of ids) {
     const customer = await source.getCustomer(id);
     if (!customer) continue;
@@ -35,9 +42,27 @@ export async function POST(req: NextRequest) {
     scanned.push({
       customerId: id,
       attritionRisk: detectOutflows(snapshot).attritionRisk,
+      /*
+       * Whether this account's feed carries counterparty narration at all.
+       * Without it a clean scan means nothing was visible, not that nothing is
+       * happening — and an RM told "no risk found" would reasonably assume the
+       * opposite.
+       */
+      narrated: (customer.transactions ?? []).some(
+        (t) => classifyCounterparty(t.category).destination !== "unknown",
+      ),
       ...(ticket ? { ticketId: ticket.id } : {}),
     });
   }
 
-  return NextResponse.json({ scanned });
+  const blind = scanned.filter((s) => !s.narrated).length;
+  return NextResponse.json({
+    scanned,
+    raised: scanned.filter((s) => s.ticketId).length,
+    unreadable: blind,
+    summary:
+      blind === scanned.length && blind > 0
+        ? `Scanned ${scanned.length} customers. None of their statement feeds carry counterparty narration, so outflows cannot be attributed — this is an absence of evidence, not a clean bill of health.`
+        : `Scanned ${scanned.length} customers; ${scanned.filter((s) => s.ticketId).length} raised${blind ? `, ${blind} unreadable for lack of narration` : ""}.`,
+  });
 }

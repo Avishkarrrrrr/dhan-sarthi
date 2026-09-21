@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, ShieldCheck, X } from "lucide-react";
 import type { ProposedAction } from "@/lib/contracts/types";
 import { postActionDecision } from "@/lib/client/api";
-import { ACTION_VERB, inr } from "@/lib/format";
+import { actionPhrase, inr } from "@/lib/format";
 
 /**
  * The customer's own decision on their own money.
@@ -65,7 +65,7 @@ export function ActionCard({
           <li key={i} className="rounded-xl border border-brand-light bg-surface/60 px-3 py-2.5">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-xs font-semibold text-brand-deep">
-                {ACTION_VERB[a.kind]} {a.instrument}
+                {actionPhrase(a)}
               </span>
               <span className="shrink-0 text-sm font-bold tabular-nums text-brand-deep">
                 {inr(a.amount)}
