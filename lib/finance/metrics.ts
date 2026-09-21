@@ -1,4 +1,5 @@
 import type { AssetClass, Customer } from "@/lib/data/types";
+import { UNCATEGORISED, isPlaceholderCategory } from "./category";
 
 export interface AllocationSlice {
   assetClass: AssetClass;
@@ -31,6 +32,45 @@ export function allocation(c: Customer): AllocationSlice[] {
   return [...byClass.entries()]
     .map(([assetClass, value]) => ({ assetClass, value, pct: (value / total) * 100 }))
     .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * What the statement supports when it carries no merchant detail.
+ *
+ * The sandbox feed is uncategorised, so a category chart there is six bars
+ * labelled with reference numbers. Money in, money out and the largest debits
+ * are all genuinely in the data, and they are enough to talk about a customer's
+ * month honestly.
+ */
+export interface Cashflow {
+  months: number;
+  monthlyIn: number;
+  monthlyOut: number;
+  debitCount: number;
+  creditCount: number;
+  /** Biggest debits in the window, largest first. */
+  largest: { date: string; amount: number; category: string }[];
+  /** False when every debit is uncategorised — the chart is then misleading. */
+  categorised: boolean;
+}
+
+export function cashflow(c: Customer): Cashflow {
+  const txns = c.transactions ?? [];
+  const months = new Set(txns.map((t) => t.date.slice(0, 7))).size || 1;
+  const debits = txns.filter((t) => t.amount < 0);
+  const credits = txns.filter((t) => t.amount > 0);
+  return {
+    months,
+    monthlyIn: Math.round(credits.reduce((s, t) => s + t.amount, 0) / months),
+    monthlyOut: Math.round(debits.reduce((s, t) => s + Math.abs(t.amount), 0) / months),
+    debitCount: debits.length,
+    creditCount: credits.length,
+    largest: debits
+      .map((t) => ({ date: t.date, amount: Math.abs(t.amount), category: t.category }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5),
+    categorised: debits.some((t) => !isPlaceholderCategory(t.category)),
+  };
 }
 
 /** Monthly-averaged spend per category (positive numbers), sorted desc. */
@@ -102,15 +142,27 @@ export function computeNudges(c: Customer): Nudge[] {
     });
   }
 
-  // Top spending category.
+  /*
+   * Top spending category — only when there is one. The live statement feed is
+   * uncategorised, and a nudge reading "Top spend: S1 TXN 19" is worse than no
+   * nudge: it advises the customer to trim a reference number.
+   */
   const spends = spendingInsights(c);
-  if (spends.length) {
-    const top = spends[0];
+  const flow = cashflow(c);
+  const top = spends[0];
+  if (top && top.category !== UNCATEGORISED) {
     nudges.push({
       id: "top-spend",
       severity: "info",
       title: `Top spend: ${top.category}`,
       detail: `You spend about ₹${top.total.toLocaleString("en-IN")}/month here. Trimming 15% could add ₹${Math.round(top.total * 0.15 * 12).toLocaleString("en-IN")}/year to your investments.`,
+    });
+  } else if (flow.monthlyOut > 0) {
+    nudges.push({
+      id: "cashflow",
+      severity: "info",
+      title: `About ₹${flow.monthlyOut.toLocaleString("en-IN")} leaves your account each month`,
+      detail: `Across ${flow.debitCount} debits. Your bank statement does not carry merchant detail, so I cannot break that into categories — but trimming 10% of it would free ₹${Math.round(flow.monthlyOut * 0.1 * 12).toLocaleString("en-IN")} a year to invest.`,
     });
   }
 

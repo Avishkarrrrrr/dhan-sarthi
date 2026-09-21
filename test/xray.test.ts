@@ -4,6 +4,12 @@ import { classify, lookThrough, CATEGORY_MODELS } from "@/lib/finance/xray";
 import { buildSnapshot } from "@/lib/contracts/snapshot";
 import { checkPolicy } from "@/lib/compliance/rules";
 import { MAX_SECTOR } from "@/lib/compliance/policy";
+import type { Allocation, AssetClass } from "@/lib/contracts/types";
+
+/** A well-formed proposal, so the rules under test are the only ones judged. */
+function plan(weights: Record<AssetClass, number>, rationale: string): Allocation {
+  return { weights, rationale, expectedReturnPct: 9, volatilityPct: 11, contributingViews: [] };
+}
 
 function customer(holdings: Holding[]): Customer {
   return {
@@ -139,7 +145,7 @@ describe("the sector rule, now that it has something to read", () => {
     const fin = snap.xray.bySector.find((s) => s.sector === "Financial Services")!;
     expect(fin.weight).toBeGreaterThan(MAX_SECTOR);
 
-    const v = checkPolicy({ weights: snap.allocationByClass, rationale: "hold" }, snap);
+    const v = checkPolicy(plan(snap.allocationByClass, "hold"), snap);
     expect(v.map((x) => x.rule)).toContain("concentration.sector");
   });
 
@@ -152,7 +158,7 @@ describe("the sector rule, now that it has something to read", () => {
     const snap = buildSnapshot(sectorFund);
     for (const growth of [0, 0.2, 0.5, 0.8]) {
       const weights = { equity: 0, mutual_fund: growth, bonds: 0, fd: 1 - growth, gold: 0, cash: 0 };
-      const v = checkPolicy({ weights, rationale: "plan" }, snap);
+      const v = checkPolicy(plan(weights, "plan"), snap);
       const sector = v.filter((x) => x.rule === "concentration.sector");
       expect(sector.every((x) => x.severity !== "high")).toBe(true);
     }
@@ -173,15 +179,14 @@ describe("the sector rule, now that it has something to read", () => {
     expect(fin.weight).toBeLessThan(0.6);
 
     const current = snap.allocationByClass;
-    const held = checkPolicy({ weights: current, rationale: "hold" }, snap).find(
+    const held = checkPolicy(plan(current, "hold"), snap).find(
       (x) => x.rule === "concentration.sector",
     );
     expect(held?.severity).toBe("low");
 
-    const more = checkPolicy(
-      { weights: { ...current, mutual_fund: 0.9, fd: 0.1 }, rationale: "add" },
-      snap,
-    ).find((x) => x.rule === "concentration.sector");
+    const more = checkPolicy(plan({ ...current, mutual_fund: 0.9, fd: 0.1 }, "add"), snap).find(
+      (x) => x.rule === "concentration.sector",
+    );
     expect(more?.severity).toBe("med");
   });
 
@@ -192,7 +197,7 @@ describe("the sector rule, now that it has something to read", () => {
         { assetClass: "mutual_fund", name: "Nifty 50 Index Fund", value: 400000 },
       ]),
     );
-    const v = checkPolicy({ weights: snap.allocationByClass, rationale: "hold" }, snap);
+    const v = checkPolicy(plan(snap.allocationByClass, "hold"), snap);
     expect(v.map((x) => x.rule)).toContain("concentration.look_through_gap");
   });
 
@@ -203,7 +208,7 @@ describe("the sector rule, now that it has something to read", () => {
         { assetClass: "mutual_fund", name: "Sensex Index Fund", value: 500000 },
       ]),
     );
-    const v = checkPolicy({ weights: snap.allocationByClass, rationale: "hold" }, snap);
+    const v = checkPolicy(plan(snap.allocationByClass, "hold"), snap);
     expect(v.map((x) => x.rule)).toContain("concentration.overlap");
   });
 });

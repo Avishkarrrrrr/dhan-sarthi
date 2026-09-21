@@ -10,6 +10,7 @@
  * `MoneyOneFIUgetAccountStatementtest` as the API's display name suggests.
  */
 import type { AssetClass, Customer, Holding, Transaction } from "@/lib/data/types";
+import { cleanCategory } from "@/lib/finance/category";
 
 const DEFAULT_BASE = "https://sandboxpocgatewayprod.idbi.bank.in/Development";
 
@@ -315,7 +316,9 @@ export function toTransaction(t: StatementTxn): Transaction {
   const isDebit = (t.transactionSummary.txnType || "").toUpperCase().startsWith("D");
   return {
     date: isoDay(t.transactionSummary.txnDate || t.valueDate),
-    category: t.transactionSummary.txnDesc || t.txnCat || "Other",
+    // The sandbox labels every row "S1 TXN 7". That is a reference number, not
+    // a category, and it must not reach a chart axis pretending to be one.
+    category: cleanCategory(t.transactionSummary.txnDesc || t.txnCat),
     amount: isDebit ? -Math.abs(value) : Math.abs(value),
   };
 }

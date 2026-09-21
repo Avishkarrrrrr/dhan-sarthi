@@ -1,6 +1,7 @@
 import type { MarketSnapshot } from "@/lib/market/nifty";
 import { monthlyExpenses } from "@/lib/contracts/snapshot";
 import { spendingInsights } from "@/lib/finance/metrics";
+import { isPlaceholderCategory } from "@/lib/finance/category";
 import {
   LIQUID_CLASSES,
   sumOf,
@@ -224,8 +225,6 @@ function inr(n: number): string {
  * spending category makes the product look broken when the data is simply
  * uncategorised.
  */
-function isPlaceholder(category: string): boolean {
-  return /^[A-Z]\d+\s+(TXN|FinPro)\s+\d+$/i.test(category.trim());
-}
+const isPlaceholder = isPlaceholderCategory;
 
 export type { AssetClass };

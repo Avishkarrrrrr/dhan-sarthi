@@ -81,10 +81,16 @@ describe("transaction mapping", () => {
     expect(toTransaction(txn({ txnType: "C" })).amount).toBe(2448.28);
   });
 
-  it("uses the description as the category and the txn date", () => {
+  it("uses the txn date, and refuses to treat a reference number as a category", () => {
     const t = toTransaction(txn());
-    expect(t.category).toBe("S1 TXN 1");
+    // The sandbox describes every row as "S1 TXN 1". Charting that puts a
+    // reference number on an axis labelled "where your money goes".
+    expect(t.category).toBe("Uncategorised");
     expect(t.date).toBe("2025-05-01");
+  });
+
+  it("keeps a real description when the feed has one", () => {
+    expect(toTransaction(txn({ txnDesc: "UPI/ZOMATO/PAY" })).category).toBe("UPI/ZOMATO/PAY");
   });
 });
 
