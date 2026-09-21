@@ -6,6 +6,7 @@ import { PortfolioOptimizer } from "./PortfolioOptimizer";
 import { AccountsPanel } from "./AccountsPanel";
 import { PortfolioXray } from "./PortfolioXray";
 import { StockPortfolio } from "./StockPortfolio";
+import { SourceLinking } from "./SourceLinking";
 import { inr, inrCompact } from "@/lib/format";
 import {
   allocation,
@@ -61,6 +62,8 @@ export function Dashboard({
           </span>
         </p>
       </div>
+
+      <SourceLinking customerId={customer.id} />
 
       <AccountsPanel customerId={customer.id} holdings={holdings} setHoldings={setHoldings} bankLinked={bankLinked} setBankLinked={setBankLinked} />
 

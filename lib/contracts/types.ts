@@ -105,6 +105,30 @@ export interface InvestmentPolicyStatement {
   goals: Goal[];
 }
 
+// ============ STAGE 1 — AGGREGATE ============
+
+/** The kinds of thing a customer's money can be in. */
+export type SourceKind = "bank" | "deposits" | "spending" | "equity" | "mf" | "bonds" | "gold";
+
+export interface SourceStatus {
+  kind: SourceKind;
+  /** Where it came from: "IDBI 365", "IDBI 393", "Added by you", "AA 739". */
+  provider: string;
+  status: "linked" | "pending" | "failed" | "skipped";
+  itemCount: number;
+  lastSyncedAt?: string;
+  /** Why a source is skipped or failed, in words a customer can read. */
+  note?: string;
+}
+
+export interface AggregationResult {
+  snapshot: FinancialSnapshot;
+  sources: SourceStatus[];
+  /** 0..1 — how much of the picture we actually have. */
+  completeness: number;
+  missing: SourceKind[];
+}
+
 // ============ STAGE 2 — DISCOVER (the voice interview) ============
 
 export type DiscoverySlot =
