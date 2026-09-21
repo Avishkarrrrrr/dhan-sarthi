@@ -1,15 +1,28 @@
 /** Sarvam AI voice helpers (server-side). Keys never reach the client. */
 
-// Map UI language codes to Sarvam language + a default speaker.
+/**
+ * Sarvam TTS model and voice.
+ *
+ * `bulbul:v2` is deprecated and now 400s — which is why every spoken reply had
+ * been silently falling back to the browser's robotic Web Speech voice rather
+ * than Sarvam. v3 also rejects the old speaker names outright, so the two must
+ * move together.
+ */
+const TTS_MODEL = "bulbul:v3";
+
+// A warm, clear Indian female voice across every supported language, so the
+// advisor keeps one identity when the customer switches language mid-conversation.
+const DEFAULT_SPEAKER = "shruti";
+
 const SPEAKERS: Record<string, string> = {
-  "en-IN": "anushka",
-  "hi-IN": "anushka",
-  "ta-IN": "anushka",
-  "te-IN": "anushka",
-  "kn-IN": "anushka",
-  "mr-IN": "anushka",
-  "bn-IN": "anushka",
-  "gu-IN": "anushka",
+  "en-IN": DEFAULT_SPEAKER,
+  "hi-IN": DEFAULT_SPEAKER,
+  "ta-IN": DEFAULT_SPEAKER,
+  "te-IN": DEFAULT_SPEAKER,
+  "kn-IN": DEFAULT_SPEAKER,
+  "mr-IN": DEFAULT_SPEAKER,
+  "bn-IN": DEFAULT_SPEAKER,
+  "gu-IN": DEFAULT_SPEAKER,
 };
 
 const SARVAM_TTS_LIMIT = 450; // chars per request (Bulbul input cap, conservative)
@@ -28,7 +41,7 @@ export function buildTtsPayload(text: string, language: string): TtsPayload {
     text: text.replace(/\s+/g, " ").trim().slice(0, SARVAM_TTS_LIMIT),
     target_language_code: lang,
     speaker: SPEAKERS[lang],
-    model: "bulbul:v2",
+    model: TTS_MODEL,
   };
 }
 

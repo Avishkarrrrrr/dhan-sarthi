@@ -3,11 +3,31 @@ import { buildTtsPayload, chunkText } from "@/lib/voice/sarvam";
 import { normalizeForSpeech, numberToWords } from "@/lib/voice/speechText";
 
 describe("buildTtsPayload", () => {
-  it("uses bulbul:v2 and a valid speaker", () => {
+  // v2 is deprecated and 400s, and v3 rejects the v2 speaker names, so the
+  // model and the voice have to be pinned together or spoken replies silently
+  // fall back to the browser's robotic voice.
+  const V3_SPEAKERS = new Set([
+    "aditya", "ritu", "ashutosh", "priya", "neha", "rahul", "pooja", "rohan",
+    "simran", "kavya", "amit", "dev", "ishita", "shreya", "ratan", "varun",
+    "manan", "sumit", "roopa", "kabir", "aayan", "shubh", "advait", "anand",
+    "tanya", "tarun", "sunny", "mani", "gokul", "vijay", "shruti", "suhani",
+    "mohit", "kavitha", "rehan", "soham", "rupali",
+  ]);
+
+  it("uses bulbul:v3 with a speaker that model accepts", () => {
     const p = buildTtsPayload("Hello Priya", "en-IN");
-    expect(p.model).toBe("bulbul:v2");
-    expect(p.speaker).toBeTruthy();
+    expect(p.model).toBe("bulbul:v3");
+    expect(V3_SPEAKERS.has(p.speaker)).toBe(true);
     expect(p.target_language_code).toBe("en-IN");
+  });
+
+  it("keeps one voice across every supported language", () => {
+    // The advisor should not change identity when the customer switches
+    // language mid-conversation.
+    const speakers = ["en-IN", "hi-IN", "ta-IN", "mr-IN", "bn-IN"].map(
+      (l) => buildTtsPayload("test", l).speaker,
+    );
+    expect(new Set(speakers).size).toBe(1);
   });
 
   it("falls back to en-IN for an unknown language", () => {
