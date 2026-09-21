@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AssetClass, Holding } from "@/lib/data/types";
 import { inr, ASSET_LABELS } from "@/lib/format";
-import { postAaJourney, type AaJourneyResponse } from "@/lib/client/api";
+import { fetchQuotes, postAaJourney, type AaJourneyResponse } from "@/lib/client/api";
+import { searchInstruments, type Instrument } from "@/lib/import/symbols";
 
 const ADDABLE: { value: AssetClass; label: string }[] = [
   { value: "equity", label: "Equity / Stocks" },
@@ -31,10 +32,41 @@ export function AccountsPanel({
   const [journey, setJourney] = useState<AaJourneyResponse | null>(null);
   const [aaError, setAaError] = useState<string | null>(null);
 
+  /*
+   * Tier 1 of portfolio import: type a name, pick the real instrument, say how
+   * much of it you hold and when you bought it. It ships first and cannot fail
+   * — no upload, no parser, no third-party auth — which is what makes it the
+   * safety net behind every other tier.
+   *
+   * The buy date is not decoration. Without an acquisition date there is no
+   * holding period, and with no holding period the tax desk cannot say
+   * anything at all beyond 80C headroom.
+   */
   const [addOpen, setAddOpen] = useState(false);
   const [addClass, setAddClass] = useState<AssetClass>("gold");
   const [addName, setAddName] = useState("");
   const [addAmount, setAddAmount] = useState(100000);
+  const [picked, setPicked] = useState<Instrument | null>(null);
+  const [quantity, setQuantity] = useState<number>(0);
+  const [avgPrice, setAvgPrice] = useState<number>(0);
+  const [boughtOn, setBoughtOn] = useState("");
+  const matches = useMemo(() => (picked ? [] : searchInstruments(addName)), [addName, picked]);
+
+  const choose = (i: Instrument) => {
+    setPicked(i);
+    setAddName(i.name);
+    setAddClass(i.assetClass);
+  };
+
+  const resetAdd = () => {
+    setAddName("");
+    setAddAmount(100000);
+    setPicked(null);
+    setQuantity(0);
+    setAvgPrice(0);
+    setBoughtOn("");
+    setAddOpen(false);
+  };
 
   /**
    * Run the real Account Aggregator consent journey against IDBI's FinPro
@@ -58,11 +90,44 @@ export function AccountsPanel({
 
   const addInvestment = () => {
     const name = addName.trim() || ASSET_LABELS[addClass];
-    setHoldings([...holdings, { assetClass: addClass, name, value: Math.max(0, addAmount) }]);
-    setAddName("");
-    setAddAmount(100000);
-    setAddOpen(false);
+    // A lot is only recorded when all three parts of it are present. A
+    // half-known cost basis is worse than none: it produces a confident
+    // capital-gains number built on a number nobody supplied.
+    const hasLot = quantity > 0 && avgPrice > 0 && !!boughtOn;
+    const value = hasLot ? Math.round(quantity * (marketPrice ?? avgPrice)) : Math.max(0, addAmount);
+
+    setHoldings([
+      ...holdings,
+      {
+        assetClass: addClass,
+        name,
+        value,
+        ...(quantity > 0 ? { quantity } : {}),
+        ...(hasLot ? { lots: [{ acquiredOn: boughtOn, quantity, costPerUnit: avgPrice }] } : {}),
+      },
+    ]);
+    resetAdd();
   };
+
+  /*
+   * Live price for the picked equity, so the value the customer sees is what
+   * the position is worth now rather than what they paid. Best-effort: a quote
+   * feed being down must not stop someone recording what they own.
+   */
+  const [marketPrice, setMarketPrice] = useState<number | null>(null);
+  useEffect(() => {
+    setMarketPrice(null);
+    if (picked?.kind !== "equity") return;
+    let live = true;
+    fetchQuotes([picked.symbol])
+      .then((q) => live && setMarketPrice(q[picked.symbol]?.ltp ?? null))
+      .catch(() => {
+        /* no live price; the entered average still values the holding */
+      });
+    return () => {
+      live = false;
+    };
+  }, [picked]);
 
   const remove = (idx: number) => setHoldings(holdings.filter((_, i) => i !== idx));
 
@@ -175,11 +240,71 @@ export function AccountsPanel({
                 <option key={a.value} value={a.value}>{a.label}</option>
               ))}
             </select>
-            <input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Name (e.g. Sovereign Gold Bond)" className="w-full rounded-lg border border-brand-light bg-white px-3 py-2 text-sm" />
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-ink/60">₹</span>
-              <input value={addAmount} onChange={(e) => setAddAmount(Number(e.target.value) || 0)} type="number" min={0} step={5000} className="flex-1 rounded-lg border border-brand-light bg-white px-3 py-2 text-sm" />
+            <div className="relative">
+              <input
+                value={addName}
+                onChange={(e) => {
+                  setAddName(e.target.value);
+                  setPicked(null);
+                }}
+                placeholder="Search — e.g. Infosys, Nifty 50, Sovereign Gold"
+                className="w-full rounded-lg border border-brand-light bg-white px-3 py-2 text-sm"
+              />
+              {matches.length > 0 && (
+                <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-brand-light bg-white shadow-lift">
+                  {matches.map((m) => (
+                    <li key={m.symbol}>
+                      <button
+                        onClick={() => choose(m)}
+                        className="flex w-full items-baseline justify-between gap-2 px-3 py-2 text-left hover:bg-surface"
+                      >
+                        <span className="truncate text-sm text-ink">{m.name}</span>
+                        <span className="shrink-0 font-mono text-[10px] text-ink/45">{m.symbol}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
+
+            {picked?.kind === "equity" ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <LabelledInput label="Shares" value={quantity} onChange={setQuantity} step={1} />
+                  <LabelledInput label="Avg buy price" value={avgPrice} onChange={setAvgPrice} step={1} />
+                </div>
+                <label className="block">
+                  <span className="text-[10px] font-medium text-ink/55">
+                    Bought on — needed for the tax desk
+                  </span>
+                  <input
+                    type="date"
+                    value={boughtOn}
+                    onChange={(e) => setBoughtOn(e.target.value)}
+                    className="mt-0.5 w-full rounded-lg border border-brand-light bg-white px-3 py-2 text-sm"
+                  />
+                </label>
+                {marketPrice !== null && quantity > 0 && (
+                  <p className="text-[11px] text-ink/60">
+                    Live {picked.symbol} {inr(marketPrice)} · worth{" "}
+                    <b className="text-brand-deep">{inr(quantity * marketPrice)}</b>
+                    {avgPrice > 0 && (
+                      <span className={quantity * (marketPrice - avgPrice) >= 0 ? " text-brand-green" : " text-red-600"}>
+                        {" "}
+                        ({quantity * (marketPrice - avgPrice) >= 0 ? "+" : "−"}
+                        {inr(Math.abs(quantity * (marketPrice - avgPrice)))})
+                      </span>
+                    )}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-ink/60">₹</span>
+                <input value={addAmount} onChange={(e) => setAddAmount(Number(e.target.value) || 0)} type="number" min={0} step={5000} className="flex-1 rounded-lg border border-brand-light bg-white px-3 py-2 text-sm" />
+              </div>
+            )}
+
             <button onClick={addInvestment} className="w-full rounded-lg bg-brand-green py-2 text-sm font-semibold text-white">
               Add to portfolio
             </button>
@@ -190,9 +315,13 @@ export function AccountsPanel({
           {investmentHoldings.length === 0 && <p className="py-2 text-center text-xs text-ink/40">No investments yet — add gold, bonds, equity and more.</p>}
           {investmentHoldings.map(({ h, i }) => (
             <div key={i} className="flex items-center justify-between rounded-lg bg-surface px-3 py-2">
-              <div>
-                <p className="text-sm font-medium text-ink">{h.name}</p>
-                <p className="text-[10px] text-ink/45">{ASSET_LABELS[h.assetClass]}</p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ink">{h.name}</p>
+                <p className="text-[10px] text-ink/45">
+                  {ASSET_LABELS[h.assetClass]}
+                  {h.quantity ? ` · ${h.quantity} units` : ""}
+                  {h.lots?.length ? ` · since ${h.lots[0].acquiredOn}` : ""}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-brand-deep">{inr(h.value)}</span>
@@ -270,5 +399,32 @@ function Fact({ label, value }: { label: string; value: string }) {
       <span className="text-ink/45">{label}: </span>
       <span className="font-medium text-ink">{value}</span>
     </p>
+  );
+}
+
+/** A small numeric field with its label, used by the holdings form. */
+function LabelledInput({
+  label,
+  value,
+  onChange,
+  step,
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  step: number;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] font-medium text-ink/55">{label}</span>
+      <input
+        type="number"
+        min={0}
+        step={step}
+        value={value || ""}
+        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        className="mt-0.5 w-full rounded-lg border border-brand-light bg-white px-3 py-2 text-sm"
+      />
+    </label>
   );
 }

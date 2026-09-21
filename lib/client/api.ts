@@ -346,3 +346,17 @@ export async function postActionDecision(
   }
   return res.json();
 }
+
+/** Live prices for equities the customer holds. Empty when the feed is down. */
+export async function fetchQuotes(
+  symbols: string[],
+): Promise<Record<string, { ltp: number; prevClose: number; dayChangePct: number }>> {
+  const res = await fetch("/api/portfolio/quotes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ symbols }),
+  });
+  if (!res.ok) return {};
+  const json = await res.json();
+  return json.quotes ?? {};
+}
