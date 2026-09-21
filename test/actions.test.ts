@@ -9,6 +9,7 @@ import type {
 import { proposeActions, MIN_ACTION_VALUE } from "@/lib/actions/propose";
 import { escalationReason, HITL_THRESHOLDS } from "@/lib/hitl/gate";
 import { gapAnalysis, projectedCorpus, requiredMonthlySip } from "@/lib/finance/sip";
+import { buildIps, committedSavings } from "@/lib/contracts/snapshot";
 
 const snapshot = snapshotSample as FinancialSnapshot;
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -171,5 +172,50 @@ describe("step-up SIP", () => {
     expect(gap.onTrack).toBe(false);
     expect(gap.shortfall).toBeGreaterThan(0);
     expect(gap.requiredMonthlySip).toBeGreaterThan(gap.statedMonthlySip);
+  });
+});
+
+/*
+ * A plan is only honest if the target and the deadline describe the same goal.
+ * Summing retirement into a four-year house deposit asked a real customer for
+ * ₹3.48 lakh a month against a ₹1.2 lakh income — arithmetically correct, and
+ * advice nobody would ever give.
+ */
+describe("the target belongs to the horizon", () => {
+  const person = (goals: { targetYear: number; targetAmount: number; current: number }[]) => ({
+    id: "t",
+    name: "Test",
+    age: 32,
+    persona: "test",
+    city: "Pune",
+    monthlyIncome: 120_000,
+    riskProfile: "moderate" as const,
+    holdings: [{ assetClass: "cash" as const, name: "Savings", value: 100_000 }],
+    transactions: [],
+    goals: goals.map((g, i) => ({ id: `g${i}`, label: `Goal ${i}`, ...g })),
+  });
+
+  const NOW = new Date("2026-01-01T00:00:00Z");
+
+  it("measures against the nearest goal, not the sum of every goal", () => {
+    const ips = buildIps(
+      person([
+        { targetYear: 2030, targetAmount: 3_000_000, current: 600_000 },
+        { targetYear: 2053, targetAmount: 20_000_000, current: 450_000 },
+      ]),
+      NOW,
+    );
+    expect(ips.horizonYears).toBe(4);
+    expect(ips.targetCorpus).toBe(3_000_000);
+    // The long goal is not discarded — it waits for its own horizon.
+    expect(ips.goals).toHaveLength(2);
+  });
+
+  it("counts only what is set aside for that goal as already saved", () => {
+    const c = person([
+      { targetYear: 2030, targetAmount: 3_000_000, current: 600_000 },
+      { targetYear: 2053, targetAmount: 20_000_000, current: 450_000 },
+    ]);
+    expect(committedSavings(c, NOW)).toBe(600_000);
   });
 });

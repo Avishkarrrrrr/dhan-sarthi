@@ -88,14 +88,39 @@ export function buildXray(c: Customer): PortfolioXray {
 export function buildIps(c: Customer, now = new Date()): InvestmentPolicyStatement {
   const year = now.getUTCFullYear();
   const horizons = c.goals.map((g) => g.targetYear - year).filter((h) => h > 0);
+  const horizonYears = horizons.length ? Math.min(...horizons) : 10;
+
+  /*
+   * The target has to belong to the same horizon as the deadline.
+   *
+   * Summing every goal — retirement included — against the *nearest* goal's
+   * horizon asks a customer to save a retirement corpus in four years. For
+   * Priya that produced a required contribution of ₹3.48 lakh a month against
+   * an income of ₹1.2 lakh: arithmetically correct, and advice no adviser
+   * would ever give. The binding goal is the near one, so that is what the
+   * plan is measured against; the longer goals stay in `goals` and come back
+   * into view as their own horizon approaches.
+   */
+  const binding = c.goals.filter((g) => g.targetYear - year > 0 && g.targetYear - year <= horizonYears);
+  const inScope = binding.length ? binding : c.goals;
+
   return {
     monthlySip: Math.max(0, monthlySurplus(c)),
     annualStepUpPct: 10,
-    horizonYears: horizons.length ? Math.min(...horizons) : 10,
-    targetCorpus: c.goals.reduce((s, g) => s + g.targetAmount, 0),
+    horizonYears,
+    targetCorpus: inScope.reduce((s, g) => s + g.targetAmount, 0),
     riskProfile: c.riskProfile,
     goals: c.goals,
   };
+}
+
+/** Already saved toward the goals the plan is measured against. */
+export function committedSavings(c: Customer, now = new Date()): number {
+  const year = now.getUTCFullYear();
+  const ips = buildIps(c, now);
+  return c.goals
+    .filter((g) => g.targetYear - year > 0 && g.targetYear - year <= ips.horizonYears)
+    .reduce((s, g) => s + g.current, 0);
 }
 
 /** Average monthly spend (positive INR), used for emergency-fund cover. */

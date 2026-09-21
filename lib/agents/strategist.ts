@@ -1,5 +1,6 @@
 import { weightedMetrics } from "@/lib/finance/mpt";
 import { gapAnalysis } from "@/lib/finance/sip";
+import { committedSavings } from "@/lib/contracts/snapshot";
 import {
   ASSET_CLASSES,
   emptyWeights,
@@ -87,8 +88,14 @@ export function strategise(views: AgentView[], snapshot: FinancialSnapshot): All
    * contribution — which is the trade-off the customer is actually making, and
    * the one a single fixed return number would hide.
    */
+  /*
+   * `existing` is what is already set aside *for this goal*, not the whole
+   * net worth. Counting an emergency fund and a term deposit toward a house
+   * deposit would report a customer as on track by spending money they need
+   * for something else.
+   */
   const gap = snapshot.ips.targetCorpus > 0
-    ? gapAnalysis(snapshot.ips, expectedReturnPct, snapshot.netWorth)
+    ? gapAnalysis(snapshot.ips, expectedReturnPct, committedSavings(snapshot.customer))
     : undefined;
 
   return {
