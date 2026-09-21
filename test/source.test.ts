@@ -107,8 +107,8 @@ describe("IdbiSource", () => {
 
   it("builds a customer from live account data for a bound id", async () => {
     const c = await new IdbiSource().getCustomer("priya");
-    expect(c?.name).toBe("PRIYA PATIL");
-    expect(c?.city).toBe("PUNE");
+    expect(c?.name).toBe("Priya Patil");
+    expect(c?.city).toBe("Pune");
     // Advisory fields are not in core banking, so they come from the binding.
     expect(c?.age).toBe(32);
     expect(c?.riskProfile).toBe("moderate");
@@ -143,5 +143,49 @@ describe("MockSource", () => {
   it("serves the bundled personas", async () => {
     const list = await new MockSource().listCustomers();
     expect(list.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("account discovery (API 394)", () => {
+  const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+
+  beforeEach(() => IdbiSource.clearKycCache());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("uses the account the CIF lookup returns, not the hardcoded one", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        asked.push(url);
+        if (/getCustomerAccountsByCustId/.test(url)) {
+          return ok({ numOfAccounts: "1", cifId: "98655854", customerAccountInfo: [{ acctNumber: "660100100999", acctType: "SBA", acctCurrCode: "INR", acctBalance: { amountValue: "1", currencyCode: "INR" } }] });
+        }
+        if (/performAccountEnquiry/.test(url)) {
+          // The discovered account must be the one we then enquire on.
+          expect(String(init?.body)).toContain("660100100999");
+          return ok(enquiry);
+        }
+        return ok(stmt);
+      }),
+    );
+    await new IdbiSource().getCustomer("priya");
+    expect(asked.some((u) => /getCustomerAccountsByCustId/.test(u))).toBe(true);
+  });
+
+  it("falls back to the bound account when discovery fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (/getCustomerAccountsByCustId/.test(url)) return new Response("boom", { status: 500 });
+        if (/performAccountEnquiry/.test(url)) {
+          expect(String(init?.body)).toContain("660100100003");
+          return ok(enquiry);
+        }
+        return ok(stmt);
+      }),
+    );
+    const c = await new IdbiSource().getCustomer("priya");
+    expect(c?.name).toBe("Priya Patil");
   });
 });

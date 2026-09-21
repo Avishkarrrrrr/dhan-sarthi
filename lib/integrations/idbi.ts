@@ -180,6 +180,14 @@ export function amt(a: IdbiAmount | undefined | null): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** "PRIYA PATIL" → "Priya Patil". Leaves already-cased text alone. */
+export function titleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (m) => m.toUpperCase())
+    .trim();
+}
+
 /** IDBI timestamps are `2025-05-01T00:00:00.000`; our domain wants yyyy-mm-dd. */
 export function isoDay(value: string | undefined | null): string {
   return String(value ?? "").slice(0, 10);
@@ -335,8 +343,13 @@ export function toCustomer(
   overrides: Partial<Customer> = {},
 ): Customer {
   const p = enquiry.personName;
-  const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ").trim() || p.name;
-  const city = enquiry.bankInfo?.postAddr?.city || enquiry.bankInfo?.branchName || "";
+  const raw = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ").trim() || p.name;
+  // Core banking returns "PRIYA PATIL" and "PUNE". Shouting the customer's own
+  // name back at them is a presentation bug, and it used to be fixed only when
+  // the Account Aggregator journey happened to succeed — so a sandbox hiccup
+  // changed how the customer's name was spelled on screen.
+  const name = titleCase(raw);
+  const city = titleCase(enquiry.bankInfo?.postAddr?.city || enquiry.bankInfo?.branchName || "");
   return {
     id,
     name,

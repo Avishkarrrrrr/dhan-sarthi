@@ -110,8 +110,9 @@ describe("holdings mapping", () => {
 describe("customer composition", () => {
   it("builds a domain Customer from live account data", () => {
     const c = toCustomer("priya", enquiry, stmt);
-    expect(c.name).toBe("PRIYA PATIL");
-    expect(c.city).toBe("PUNE");
+    // Core banking shouts; the boundary presents it properly.
+    expect(c.name).toBe("Priya Patil");
+    expect(c.city).toBe("Pune");
     expect(c.holdings).toHaveLength(2);
     expect(c.transactions).toHaveLength(2);
   });

@@ -161,6 +161,36 @@ export async function runConsentJourney(args: JourneyArgs): Promise<ConsentJourn
     journey.status = "failed";
   }
 
+  /*
+   * 595 — the MoneyOne FIU route to the same consent.
+   *
+   * Two FIUs serve this sandbox and they do not return identical data: 739
+   * carries twenty transactions with reference-number narration, 595 fewer but
+   * with real descriptions ("Salary Credit"). Asking the second only when the
+   * first came back empty keeps one fetch in the normal case while still
+   * surviving one FIU being down — which is the actual reason a production AA
+   * integration talks to more than one.
+   */
+  if (!journey.accounts.length) {
+    try {
+      const res = await idbi.getMoneyOneStatement(consent.consentID, journey.linkRefNumbers, signal);
+      journey.accounts = res.data ?? [];
+      if (journey.accounts.length) journey.status = "active";
+      steps.push(
+        step(
+          "595",
+          "Second FIU queried",
+          journey.accounts.length > 0,
+          journey.accounts.length
+            ? `${journey.accounts.length} account(s), ${countTxns(journey.accounts)} transactions`
+            : "No data from the secondary FIU either",
+        ),
+      );
+    } catch (e) {
+      steps.push(step("595", "Second FIU queried", false, message(e)));
+    }
+  }
+
   return journey;
 }
 

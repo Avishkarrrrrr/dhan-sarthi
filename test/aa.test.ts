@@ -239,3 +239,56 @@ describe("consent journey", () => {
     expect(journey.status).toBe("active");
   });
 });
+
+describe("second FIU fallback (API 595)", () => {
+  const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+  const consentList = {
+    status: "SUCCESS",
+    data: [
+      {
+        consentID: "CONSENT-0001",
+        status: "ACTIVE",
+        consent_handle: "handle-1",
+        accountID: "660100100003",
+        vua: "9988776655@onemoney",
+        accounts: [{ linkReferenceNumber: "LRN0001", fipName: "IDBI", fipId: "IDBI001", accountType: "SAVINGS", maskedAccountNumber: "XXXX0003", fiType: "DEPOSIT" }],
+      },
+    ],
+  };
+  const args = { mobile: "9988776655", accountId: "660100100003", vua: "9988776655@onemoney" };
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("asks the second FIU only when the first returns nothing", async () => {
+    const seen: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        seen.push(url);
+        if (/requestConsent/.test(url)) return ok({ data: { status: "PENDING", consent_handle: "handle-1" } });
+        if (/getConsentList/.test(url)) return ok(consentList);
+        if (/getAccountStatementFromFinPro/.test(url)) return ok({ status: "success", data: [] });
+        if (/getAccountStatementtest/.test(url)) return ok({ status: "Success", data: [account] });
+        return ok({});
+      }),
+    );
+    const journey = await runConsentJourney(args);
+    expect(journey.steps.map((s) => s.api)).toEqual(["590", "591", "739", "595"]);
+    expect(journey.status).toBe("active");
+    expect(journey.accounts).toHaveLength(1);
+  });
+
+  it("does not call the second FIU when the first already answered", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (/requestConsent/.test(url)) return ok({ data: { status: "PENDING", consent_handle: "handle-1" } });
+        if (/getConsentList/.test(url)) return ok(consentList);
+        if (/getAccountStatementFromFinPro/.test(url)) return ok({ status: "success", data: [account] });
+        if (/getAccountStatementtest/.test(url)) throw new Error("must not query the second FIU");
+        return ok({});
+      }),
+    );
+    const journey = await runConsentJourney(args);
+    expect(journey.steps.map((s) => s.api)).toEqual(["590", "591", "739"]);
+  });
+});

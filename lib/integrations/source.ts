@@ -45,6 +45,8 @@ export interface IdbiCustomerBinding {
   /** AA party identifiers. Present means the consent journey can run for them. */
   mobile?: string;
   vua?: string;
+  /** Account type to look for when discovering accounts by CIF (API 394). */
+  acctType?: string;
   /**
    * Advisory fields core banking does not expose. `age` here is a fallback
    * only — when the AA consent is active, the real date of birth wins.
@@ -99,9 +101,16 @@ export class IdbiSource implements FinancialDataSource {
     if (!binding) return this.fallback.getCustomer(id);
 
     try {
+      // Discover the customer's accounts from their CIF (API 394) rather than
+      // trusting a hardcoded account number. This is how a real integration
+      // works — a CIF is the identity, the account list is a lookup — and it
+      // means a customer with a different or additional account still
+      // resolves. Falls back to the bound account if discovery fails.
+      const acctId = await this.resolveAccount(binding);
+
       const [enquiry, stmt] = await Promise.all([
-        idbi.getAccountEnquiry(binding.acctId),
-        idbi.getStatement(binding.acctId, binding.fromDate, binding.toDate),
+        idbi.getAccountEnquiry(acctId),
+        idbi.getStatement(acctId, binding.fromDate, binding.toDate),
       ]);
       const { persona, ...advisory } = binding.advisory;
       const customer = toCustomer(binding.id, enquiry, stmt, {
@@ -128,6 +137,29 @@ export class IdbiSource implements FinancialDataSource {
    * the demo — but the identity overlay reads through this.
    */
   private static kycCache = new Map<string, { at: number; kyc?: KycProfile }>();
+
+  /**
+   * The account to advise on, discovered from the CIF via API 394.
+   *
+   * Cached with the identity: the account list does not change between page
+   * loads, and this sits in front of every profile request.
+   */
+  private static acctCache = new Map<string, { at: number; acctId: string }>();
+
+  private async resolveAccount(binding: IdbiCustomerBinding): Promise<string> {
+    const cached = IdbiSource.acctCache.get(binding.id);
+    if (cached && Date.now() - cached.at < KYC_TTL_MS) return cached.acctId;
+
+    try {
+      const res = await idbi.getCustomerAccounts(binding.cifId, binding.acctType ?? "SBA");
+      const found = res.customerAccountInfo?.[0]?.acctNumber;
+      const acctId = found || binding.acctId;
+      IdbiSource.acctCache.set(binding.id, { at: Date.now(), acctId });
+      return acctId;
+    } catch {
+      return binding.acctId;
+    }
+  }
 
   /** Run the consent journey for a bound customer. Undefined if not bound. */
   async journey(id: string): Promise<ConsentJourney | undefined> {
@@ -163,9 +195,10 @@ export class IdbiSource implements FinancialDataSource {
     }
   }
 
-  /** Test seam. */
+  /** Test seam — both caches are static, so both must be cleared. */
   static clearKycCache(): void {
     IdbiSource.kycCache.clear();
+    IdbiSource.acctCache.clear();
   }
 }
 
