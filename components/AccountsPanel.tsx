@@ -102,6 +102,7 @@ export function AccountsPanel({
         assetClass: addClass,
         name,
         value,
+        ...(picked?.kind === "equity" ? { symbol: picked.symbol } : {}),
         ...(quantity > 0 ? { quantity } : {}),
         ...(hasLot ? { lots: [{ acquiredOn: boughtOn, quantity, costPerUnit: avgPrice }] } : {}),
       },

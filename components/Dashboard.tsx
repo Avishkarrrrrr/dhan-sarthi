@@ -5,6 +5,7 @@ import { SpendingChart } from "./charts/SpendingChart";
 import { PortfolioOptimizer } from "./PortfolioOptimizer";
 import { AccountsPanel } from "./AccountsPanel";
 import { PortfolioXray } from "./PortfolioXray";
+import { StockPortfolio } from "./StockPortfolio";
 import { inr, inrCompact } from "@/lib/format";
 import {
   allocation,
@@ -68,6 +69,8 @@ export function Dashboard({
           <AllocationChart data={alloc} />
         </Card>
       )}
+
+      <StockPortfolio customer={live} />
 
       <PortfolioXray customer={live} />
 

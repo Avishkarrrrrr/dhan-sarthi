@@ -14,6 +14,8 @@ export interface Holding {
   value: number;
   /** Units held, where the source knows them. Needed to price a lot. */
   quantity?: number;
+  /** NSE symbol, when this holding is a listed company we can quote. */
+  symbol?: string;
   /**
    * Purchase history. Optional because a bank feed does not carry it and a CAS
    * carries it only for funds — the tax desk says what it cannot compute
