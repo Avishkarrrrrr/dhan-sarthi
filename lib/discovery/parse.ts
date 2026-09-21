@@ -19,10 +19,19 @@ const WORD_NUMBERS: Record<string, number> = {
   aath: 8, nau: 9, das: 10, pandrah: 15, bees: 20, pachees: 25, tees: 30,
 };
 
+/*
+ * Magnitude words, in every script the interview is offered in. Sarvam's STT
+ * returns the customer's own language, so "ஐம்பது லட்சம்" arrives in Tamil and
+ * an English-only matcher would silently read it as fifty.
+ *
+ * No `\b` around the Indic alternatives: word boundaries are defined by ASCII
+ * word characters, so `\b` never matches beside Devanagari or Tamil text and
+ * the pattern would never fire.
+ */
 const MULTIPLIERS: { re: RegExp; factor: number }[] = [
-  { re: /\b(crore|cr|karod|करोड़)\b/i, factor: 1e7 },
-  { re: /\b(lakh|lac|lakhs|lakh's|लाख)\b/i, factor: 1e5 },
-  { re: /\b(thousand|hazaar|hazar|hajar|हज़ार|हजार)\b/i, factor: 1e3 },
+  { re: /(\bcrore\b|\bcr\b|\bkarod\b|करोड़|कोटी|கோடி|కోటి|কোটি)/i, factor: 1e7 },
+  { re: /(\blakh\b|\blac\b|\blakhs\b|लाख|லட்சம்|లక్ష|লাখ|লক্ষ)/i, factor: 1e5 },
+  { re: /(\bthousand\b|\bhazaar\b|\bhazar\b|\bhajar\b|हज़ार|हजार|ஆயிரம்|వేల|వెయ్యి|হাজার)/i, factor: 1e3 },
 ];
 
 /**
@@ -74,7 +83,7 @@ export function parseYears(text: string, now = new Date()): number | undefined {
     if (diff > 0) return diff;
   }
 
-  const months = t.match(/(\d+)\s*(months?|mahine|महीने)/);
+  const months = t.match(/(\d+)\s*(months?|mahine|महीने|महिने|மாத|నెల|মাস)/);
   if (months) return Math.max(1, Math.round(parseInt(months[1], 10) / 12));
 
   const n = parseAmount(t);
@@ -86,7 +95,7 @@ export function parseYears(text: string, now = new Date()): number | undefined {
 /** A percentage, from "10 percent", "10%", "ten per cent". */
 export function parsePercent(text: string): number | undefined {
   const t = (text ?? "").toLowerCase();
-  const m = t.match(/(\d+(?:\.\d+)?)\s*(%|percent|per cent|pct|प्रतिशत)/);
+  const m = t.match(/(\d+(?:\.\d+)?)\s*(%|percent|per cent|pct|प्रतिशत|टक्के|சதவீத|శాతం|শতাংশ)/);
   if (m) return parseFloat(m[1]);
   // A bare small number in answer to a percentage question is a percentage.
   const n = parseAmount(t);
@@ -96,21 +105,28 @@ export function parsePercent(text: string): number | undefined {
 /** Yes / no / neither, across the words people actually use. */
 export function parseYesNo(text: string): boolean | undefined {
   const t = (text ?? "").toLowerCase().trim();
-  if (/\b(yes|yeah|yep|correct|right|sure|ok|okay|haan|haa|ha|ji|sahi|theek|confirm|confirmed|go ahead)\b/.test(t)) {
+  // No is checked first: "no, that's not right" contains "right".
+  if (/(\bno\b|\bnope\b|\bnot\b|\bwrong\b|\bnahi\b|\bnahin\b|\bna\b|\bgalat\b|\bchange\b|\bcancel\b|नाही|नहीं|இல்லை|கிடையாது|కాదు|లేదు|না)/.test(t)) {
+    return false;
+  }
+  if (/(\byes\b|\byeah\b|\byep\b|\bcorrect\b|\bright\b|\bsure\b|\bok\b|\bokay\b|\bhaan\b|\bhaa\b|\bha\b|\bji\b|\bsahi\b|\btheek\b|\bconfirm\b|\bconfirmed\b|\bgo ahead\b|हाँ|हां|होय|बरोबर|ஆம்|சரி|అవును|సరే|হ্যাঁ|ঠিক)/.test(t)) {
     return true;
   }
-  if (/\b(no|nope|not|wrong|nahi|nahin|na|galat|change|cancel)\b/.test(t)) return false;
   return undefined;
 }
 
 /** Risk appetite, from how someone describes themselves. */
 export function parseRisk(text: string): "conservative" | "moderate" | "aggressive" | undefined {
   const t = (text ?? "").toLowerCase();
-  if (/\b(aggressive|high risk|risky|growth|bold|zyada risk|high)\b/.test(t)) return "aggressive";
-  if (/\b(conservative|safe|low risk|cautious|careful|surakshit|kam risk|low|fd|deposit)\b/.test(t)) {
+  if (/(\baggressive\b|\bhigh risk\b|\brisky\b|\bgrowth\b|\bbold\b|\bzyada risk\b|\bhigh\b|आक्रामक|आक्रमक|तीவிரமான|దూకుడు|আক্রমণাত্মক)/.test(t)) {
+    return "aggressive";
+  }
+  if (/(\bconservative\b|\bsafe\b|\blow risk\b|\bcautious\b|\bcareful\b|\bsurakshit\b|\bkam risk\b|\blow\b|\bfd\b|\bdeposit\b|सुरक्षित|पाதுகாப்பான|సురక్షిత|নিরাপদ)/.test(t)) {
     return "conservative";
   }
-  if (/\b(moderate|balanced|medium|middle|thoda|average)\b/.test(t)) return "moderate";
+  if (/(\bmoderate\b|\bbalanced\b|\bmedium\b|\bmiddle\b|\bthoda\b|\baverage\b|संतुलित|சமநிலை|సమతుల్య|ভারসাম্য)/.test(t)) {
+    return "moderate";
+  }
   return undefined;
 }
 
@@ -123,7 +139,7 @@ export function parseRisk(text: string): "conservative" | "moderate" | "aggressi
  */
 export function parseGoals(text: string): string[] {
   return (text ?? "")
-    .split(/\band\b|,|;|\bplus\b|\baur\b|\bthen\b/i)
+    .split(/\band\b|,|;|\bplus\b|\baur\b|\bthen\b|और|आणि|மற்றும்|మరియు|এবং/i)
     .map((g) => g.trim().replace(/^(i want|i need|for|to|my)\s+/i, "").trim())
     .filter((g) => g.length > 2)
     .slice(0, 4);

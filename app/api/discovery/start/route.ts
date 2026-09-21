@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { selectSource } from "@/lib/integrations/source";
 import { firstQuestion, startSession } from "@/lib/discovery/machine";
+import { phrases } from "@/lib/discovery/phrases";
 import { save } from "@/lib/discovery/session";
 
 export const runtime = "nodejs";
@@ -20,11 +21,13 @@ export async function POST(req: NextRequest) {
   const customer = await selectSource().getCustomer(body.customerId);
   if (!customer) return NextResponse.json({ error: "Unknown customer" }, { status: 404 });
 
-  const state = save(startSession(body.customerId, body.language ?? "en-IN"));
+  const language = body.language ?? "en-IN";
+  const state = save(startSession(body.customerId, language));
+  const say = phrases(language);
   const name = customer.name.split(" ")[0];
   return NextResponse.json({
     state,
-    spokenText: `Hello ${name}. Before I suggest anything, I would like to understand what you are planning for. ${firstQuestion()}`,
+    spokenText: `${say.greeting(name)} ${firstQuestion(language)}`,
     complete: false,
   });
 }

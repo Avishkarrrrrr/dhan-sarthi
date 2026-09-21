@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import snapshotSample from "@/lib/contracts/fixtures/snapshot.sample.json";
 import type { DiscoveryState, FinancialSnapshot } from "@/lib/contracts/types";
 import { advance, startSession, toIps } from "@/lib/discovery/machine";
+import { phrases } from "@/lib/discovery/phrases";
+import { SLOTS } from "@/lib/discovery/slots";
 import { parseAmount, parsePercent, parseRisk, parseYears, parseYesNo } from "@/lib/discovery/parse";
 
 const snapshot = snapshotSample as FinancialSnapshot;
@@ -156,5 +158,82 @@ describe("the interview", () => {
     const ips = toIps(state, snapshot);
     expect(ips.monthlySip).toBe(snapshot.investableSurplus);
     expect(ips.riskProfile).toBe(snapshot.customer.riskProfile);
+  });
+});
+
+/*
+ * Sarvam will happily speak an English sentence in an Indian voice, which
+ * sounds like it works and is not the same thing at all. A customer asked
+ * about their retirement in a language they do not read is not being
+ * interviewed.
+ */
+describe("the interview in the customer's own language", () => {
+  const LANGS = ["hi-IN", "mr-IN", "ta-IN", "te-IN", "bn-IN"];
+
+  it("asks every question in every offered language", () => {
+    for (const lang of LANGS) {
+      const say = phrases(lang);
+      for (const slot of SLOTS) {
+        expect(say.questions[slot.id], `${lang} ${slot.id}`).toBeTruthy();
+        expect(say.reasks[slot.id], `${lang} ${slot.id} reask`).toBeTruthy();
+        // A question still in English would mean a half-translated interview,
+        // which is worse than an honestly English one.
+        expect(say.questions[slot.id]).not.toBe(phrases("en-IN").questions[slot.id]);
+      }
+    }
+  });
+
+  it("falls back to English rather than mixing languages", () => {
+    expect(phrases("ml-IN").questions.horizonYears).toBe(phrases("en-IN").questions.horizonYears);
+    expect(phrases(undefined).confirmed).toBe(phrases("en-IN").confirmed);
+  });
+
+  it("runs a whole Hindi conversation to a confirmed plan", () => {
+    let state = startSession("priya", "hi-IN");
+    const answers = [
+      "गाड़ी और इमरजेंसी फंड",
+      "रिटायरमेंट और बच्चों की पढ़ाई",
+      "15 साल",
+      "2 करोड़",
+      "50 हज़ार हर महीने",
+      "10 प्रतिशत",
+      "मैं इंतज़ार करूँगा",
+      "6 महीने",
+    ];
+    let said = "";
+    for (const a of answers) {
+      const r = advance(state, a, snapshot);
+      state = r.state;
+      said = r.spokenText;
+    }
+    expect(state.status).toBe("confirming");
+    expect(said).toMatch(/क्या यह सही है/);
+    // The magnitudes have to survive the script, or "2 करोड़" becomes ₹2.
+    expect(state.filled.targetCorpus).toBe(20_000_000);
+    expect(state.filled.monthlyInvestable).toBe(50_000);
+    expect(state.filled.horizonYears).toBe(15);
+
+    const done = advance(state, "हाँ, सही है", snapshot);
+    expect(done.complete).toBe(true);
+    expect(done.ips!.targetCorpus).toBe(20_000_000);
+    expect(done.spokenText).toBe(phrases("hi-IN").confirmed);
+  });
+
+  it("reads magnitudes in Tamil, Telugu and Bengali", () => {
+    expect(parseAmount("ஐம்பது லட்சம்")).toBe(undefined); // words, not numerals
+    expect(parseAmount("50 லட்சம்")).toBe(5_000_000);
+    expect(parseAmount("1 కోటి")).toBe(10_000_000);
+    expect(parseAmount("25 হাজার")).toBe(25_000);
+  });
+
+  it("reads yes and no in every language", () => {
+    expect(parseYesNo("हाँ")).toBe(true);
+    expect(parseYesNo("होय")).toBe(true);
+    expect(parseYesNo("ஆம்")).toBe(true);
+    expect(parseYesNo("అవును")).toBe(true);
+    expect(parseYesNo("হ্যাঁ")).toBe(true);
+    expect(parseYesNo("नहीं")).toBe(false);
+    expect(parseYesNo("இல்லை")).toBe(false);
+    expect(parseYesNo("কাদু")).toBeUndefined();
   });
 });

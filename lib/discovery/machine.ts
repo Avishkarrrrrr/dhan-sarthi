@@ -9,6 +9,7 @@ import type {
   RiskProfile,
 } from "@/lib/contracts/types";
 import { parseYesNo } from "./parse";
+import { phrases } from "./phrases";
 import { SLOTS, slotDef } from "./slots";
 
 /**
@@ -41,8 +42,8 @@ export function startSession(customerId: string, language = "en-IN"): DiscoveryS
   };
 }
 
-export function firstQuestion(): string {
-  return SLOTS[0].question;
+export function firstQuestion(language?: string): string {
+  return phrases(language).questions[SLOTS[0].id];
 }
 
 /**
@@ -65,18 +66,15 @@ export function advance(
     warnings: [...state.warnings],
   };
 
+  const say = phrases(next.language);
+
   // ── The read-back. Nothing is signed until the customer says yes. ──
   if (next.status === "confirming") {
     const yes = parseYesNo(transcript);
     if (yes === true) {
       next.status = "complete";
       const ips = toIps(next, snapshot);
-      return {
-        state: next,
-        spokenText: "Thank you. I have your plan. Let me take it to the committee.",
-        complete: true,
-        ips,
-      };
+      return { state: next, spokenText: say.confirmed, complete: true, ips };
     }
     if (yes === false) {
       /*
@@ -92,15 +90,11 @@ export function advance(
       for (const s of next.pending) delete next.filled[s];
       return {
         state: next,
-        spokenText: `Let us fix that. ${slotDef(next.pending[0]).question}`,
+        spokenText: `${say.fixThat} ${say.questions[next.pending[0]]}`,
         complete: false,
       };
     }
-    return {
-      state: next,
-      spokenText: `Sorry — is that plan right? Please say yes or no.`,
-      complete: false,
-    };
+    return { state: next, spokenText: say.notUnderstood, complete: false };
   }
 
   const current = next.pending[0];
@@ -113,7 +107,7 @@ export function advance(
 
   next.turns.push({
     slot: current,
-    askedText: def.question,
+    askedText: say.questions[current],
     userTranscript: transcript,
     extracted: { [current]: value ?? null },
     confidence,
@@ -129,16 +123,17 @@ export function advance(
     if (alreadyReasked) {
       next.pending.shift();
       next.warnings.push(`${current} was not captured; a default has been used.`);
-      return ask(next, snapshot, "No problem, let us move on. ");
+      return ask(next, snapshot, `${say.moveOn} `);
     }
-    return { state: next, spokenText: def.reask, complete: false };
+    return { state: next, spokenText: say.reasks[current], complete: false };
   }
 
   next.filled[current] = value;
   next.pending.shift();
 
   // A warning is said out loud and recorded — never used to reject the answer.
-  const warning = def.check?.(value, snapshot);
+  const flag = def.check?.(value, snapshot);
+  const warning = flag ? say.warn[flag.key](flag.stated, flag.surplus) : undefined;
   const prefix = warning ? `${warning} ` : "";
   if (warning) next.warnings.push(warning);
 
@@ -152,7 +147,8 @@ function ask(
 ): DiscoveryTurnResponse {
   const nextSlot = state.pending[0];
   if (!nextSlot) return readBack(state, snapshot, prefix);
-  return { state, spokenText: `${prefix}${slotDef(nextSlot).question}`, complete: false };
+  const say = phrases(state.language);
+  return { state, spokenText: `${prefix}${say.questions[nextSlot]}`, complete: false };
 }
 
 /** The whole plan, in one spoken sentence, before anything is signed. */
@@ -162,13 +158,14 @@ function readBack(
   prefix = "",
 ): DiscoveryTurnResponse {
   state.status = "confirming";
+  const say = phrases(state.language);
   const parts = SLOTS.filter((s) => s.id in state.filled).map((s) =>
-    s.describe(state.filled[s.id]),
+    say.describe[s.id](state.filled[s.id]),
   );
   void snapshot;
   return {
     state,
-    spokenText: `${prefix}Let me confirm what I understood. You are planning for ${parts.join("; ")}. Have I got that right?`,
+    spokenText: `${prefix}${say.confirm(parts.join("; "))}`,
     complete: false,
   };
 }

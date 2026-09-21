@@ -51,15 +51,26 @@ interface Line {
   text: string;
 }
 
+/** The languages the interview is written in, not merely spoken in. */
+const LANGUAGES: { code: string; label: string }[] = [
+  { code: "en-IN", label: "English" },
+  { code: "hi-IN", label: "हिंदी" },
+  { code: "mr-IN", label: "मराठी" },
+  { code: "ta-IN", label: "தமிழ்" },
+  { code: "te-IN", label: "తెలుగు" },
+  { code: "bn-IN", label: "বাংলা" },
+];
+
 export function VoiceInterview({
   customerId,
-  language = "en-IN",
+  language: initialLanguage = "en-IN",
   onComplete,
 }: {
   customerId: string;
   language?: string;
   onComplete?: (ips: InvestmentPolicyStatement) => void;
 }) {
+  const [language, setLanguage] = useState(initialLanguage);
   const [state, setState] = useState<DiscoveryState | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [typed, setTyped] = useState("");
@@ -140,11 +151,32 @@ export function VoiceInterview({
     <div className="flex h-full flex-col">
       {/* The checklist. The interview's shape, visible. */}
       <div className="border-b border-brand-light bg-surface/60 px-4 py-3">
-        <div className="mb-2 flex items-baseline justify-between">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-xs font-semibold text-brand-deep">Your plan</p>
-          <p className="text-[11px] tabular-nums text-ink/50">
-            {filled.size} of {ORDER.length}
-          </p>
+          <div className="flex items-center gap-2">
+            {/*
+              Chosen before the first question, and locked after it. Switching
+              language mid-interview would leave half the conversation in a
+              language the customer cannot re-read, which is worse than either
+              language alone.
+            */}
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              disabled={lines.length > 1}
+              aria-label="Interview language"
+              className="rounded-lg border border-brand-light bg-white px-2 py-1 text-[11px] text-ink/70 disabled:opacity-50"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] tabular-nums text-ink/50">
+              {filled.size} of {ORDER.length}
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
           {ORDER.map((slot) => {
