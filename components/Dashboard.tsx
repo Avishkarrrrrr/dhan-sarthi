@@ -49,7 +49,7 @@ export function Dashboard({
         </p>
       </div>
 
-      <AccountsPanel holdings={holdings} setHoldings={setHoldings} bankLinked={bankLinked} setBankLinked={setBankLinked} />
+      <AccountsPanel customerId={customer.id} holdings={holdings} setHoldings={setHoldings} bankLinked={bankLinked} setBankLinked={setBankLinked} />
 
       {alloc.length > 0 && (
         <Card title="Asset allocation">

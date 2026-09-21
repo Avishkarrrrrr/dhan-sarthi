@@ -6,6 +6,9 @@ import type { MarketSnapshot } from "@/lib/market/nifty";
 import type { StrategyInput, StrategyResult } from "@/lib/strategy/engine";
 import type { CompanyAnalysis } from "@/lib/research/companies";
 import type { MptResult } from "@/lib/finance/mpt";
+import type { CustomerSummary, Transaction } from "@/lib/data/types";
+import type { JourneyStep, KycProfile } from "@/lib/integrations/aa";
+import type { ComplianceVerdict, Allocation, EscalationTicket } from "@/lib/contracts/types";
 
 export async function fetchProfile(id: string): Promise<ProfileResponse> {
   const res = await fetch(`/api/profile?id=${encodeURIComponent(id)}`);
@@ -103,5 +106,75 @@ export async function postOptimize(customerId: string): Promise<{ result: MptRes
     body: JSON.stringify({ customerId }),
   });
   if (!res.ok) throw new Error(`optimize ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Customer roster. Fetched rather than imported so the browser never bundles
+ * the demo dataset, and so a live IDBI roster can replace it without a rebuild.
+ */
+export async function fetchCustomers(): Promise<{
+  customers: CustomerSummary[];
+  source: "mock" | "idbi";
+  degraded?: boolean;
+}> {
+  const res = await fetch("/api/customers");
+  if (!res.ok) throw new Error(`customers ${res.status}`);
+  return res.json();
+}
+
+export interface AaJourneyResponse {
+  status: "active" | "pending" | "failed";
+  steps: JourneyStep[];
+  consentHandle?: string;
+  consentId?: string;
+  linkRefNumbers: string[];
+  kyc?: KycProfile;
+  balance: number;
+  transactions: Transaction[];
+  paymentModes: { mode: string; count: number }[];
+}
+
+/**
+ * Run the Account Aggregator consent journey. Returns the step-by-step trace
+ * of the real calls to IDBI's FinPro sandbox, plus what the consent unlocked.
+ */
+export async function postAaJourney(customerId: string): Promise<AaJourneyResponse> {
+  const res = await fetch("/api/aa", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ customerId }),
+  });
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({}));
+    throw new Error(msg.error || `aa ${res.status}`);
+  }
+  return res.json();
+}
+
+export interface ComplianceResponse extends ComplianceVerdict {
+  finalAllocation: Allocation;
+  spokenText: string;
+  disclaimers: string[];
+  ticket: EscalationTicket | null;
+  auditId: string;
+}
+
+/** Vet a proposed allocation against the deterministic suitability rules. */
+export async function postCompliance(params: {
+  allocation: Allocation;
+  customerId?: string;
+  snapshot?: unknown;
+  spokenText?: string;
+}): Promise<ComplianceResponse> {
+  const res = await fetch("/api/compliance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({}));
+    throw new Error(msg.error || `compliance ${res.status}`);
+  }
   return res.json();
 }

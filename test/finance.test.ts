@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   allocation,
   computeNudges,
+  monthlySurplus,
   netWorth,
   spendingInsights,
 } from "@/lib/finance/metrics";
@@ -76,5 +77,37 @@ describe("profile builder", () => {
     expect(p.netWorth).toBeGreaterThan(0);
     expect(p.nudges.length).toBeGreaterThan(0);
     expect(p.allocation.length).toBeGreaterThan(0);
+  });
+});
+
+describe("monthly surplus with a one-sided statement", () => {
+  const base = {
+    id: "x", name: "X", age: 30, persona: "p", city: "Pune",
+    monthlyIncome: 120000, riskProfile: "moderate" as const,
+    holdings: [], goals: [],
+  };
+
+  it("uses income minus spend when the window caught no credits", () => {
+    // A single-month core-banking pull: debits present, the salary that funded
+    // them is outside the window.
+    const c = {
+      ...base,
+      transactions: [
+        { date: "2025-05-02", category: "Rent", amount: -30000 },
+        { date: "2025-05-06", category: "Groceries", amount: -10000 },
+      ],
+    };
+    expect(monthlySurplus(c)).toBe(80000);
+  });
+
+  it("still nets credits against debits when both are present", () => {
+    const c = {
+      ...base,
+      transactions: [
+        { date: "2025-05-01", category: "Salary", amount: 120000 },
+        { date: "2025-05-02", category: "Rent", amount: -30000 },
+      ],
+    };
+    expect(monthlySurplus(c)).toBe(90000);
   });
 });

@@ -55,9 +55,22 @@ export function equityExposurePct(c: Customer): number {
   return equity;
 }
 
-/** Rough monthly-savings estimate: average monthly (credits - debits). */
+/**
+ * Rough monthly-savings estimate: average monthly (credits − debits).
+ *
+ * Falls back to income minus spend when the statement window contains no
+ * credits at all. A core-banking statement pulled for a single month often
+ * catches the debits but not the salary that funded them, and netting those
+ * alone reports the customer as losing their whole income every month — which
+ * is not a surplus estimate, it is an artefact of the window.
+ */
 export function monthlySurplus(c: Customer): number {
   const months = new Set(c.transactions.map((t) => t.date.slice(0, 7))).size || 1;
+  const credits = c.transactions.filter((t) => t.amount > 0);
+  if (credits.length === 0) {
+    const spend = spendingInsights(c).reduce((s, x) => s + x.total, 0);
+    return Math.round(c.monthlyIncome - spend);
+  }
   const net = c.transactions.reduce((s, t) => s + t.amount, 0);
   return Math.round(net / months);
 }
