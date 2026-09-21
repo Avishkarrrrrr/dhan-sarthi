@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AssetClass } from "@/lib/data/types";
-import type { Allocation, Severity, Violation } from "@/lib/contracts/types";
+import type { Allocation, RiskProfile, Severity, Violation } from "@/lib/contracts/types";
 import { postCompliance, type ComplianceResponse } from "@/lib/client/api";
 import { CommitteeRoom } from "./CommitteeRoom";
 import { ASSET_LABELS } from "@/lib/format";
@@ -71,7 +71,7 @@ const STATUS_STYLE: Record<ComplianceResponse["status"], { chip: string; label: 
   block: { chip: "bg-red-100 text-red-700", label: "Blocked" },
 };
 
-export function TrustPanel({ customerId }: { customerId: string }) {
+export function TrustPanel({ customerId, riskProfile }: { customerId: string; riskProfile?: RiskProfile }) {
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [verdict, setVerdict] = useState<ComplianceResponse | null>(null);
   const [running, setRunning] = useState(false);
@@ -108,7 +108,7 @@ export function TrustPanel({ customerId }: { customerId: string }) {
         </p>
       </header>
 
-      <CommitteeRoom customerId={customerId} />
+      <CommitteeRoom customerId={customerId} riskProfile={riskProfile} />
 
       {/* Adversarial proposals, to show the checks bite */}
       <section className="rounded-2xl border border-brand-light bg-white p-4 shadow-soft">

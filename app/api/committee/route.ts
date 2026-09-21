@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildSnapshot } from "@/lib/contracts/snapshot";
 import { runCommittee } from "@/lib/agents/committee";
 import { selectSource } from "@/lib/integrations/source";
+import type { RiskProfile } from "@/lib/contracts/types";
+
+const PROFILES: RiskProfile[] = ["conservative", "moderate", "aggressive"];
 
 export const runtime = "nodejs";
 
@@ -13,7 +16,7 @@ export const runtime = "nodejs";
  * leave no server state to clean up.
  */
 export async function POST(req: NextRequest) {
-  let body: { customerId?: string; query?: string } = {};
+  let body: { customerId?: string; query?: string; riskProfile?: RiskProfile } = {};
   try {
     body = await req.json();
   } catch {
@@ -25,6 +28,15 @@ export async function POST(req: NextRequest) {
   if (!customer) return NextResponse.json({ error: "Unknown customer" }, { status: 404 });
 
   const snapshot = buildSnapshot(customer);
+
+  // A risk profile chosen during onboarding overrides the one on file. It
+  // changes the house model the strategist starts from *and* the suitability
+  // limits compliance judges against, so answering the questions honestly
+  // visibly changes the advice — which is the point of asking.
+  if (body.riskProfile && PROFILES.includes(body.riskProfile)) {
+    snapshot.ips.riskProfile = body.riskProfile;
+    snapshot.customer.riskProfile = body.riskProfile;
+  }
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({

@@ -29,7 +29,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const journey = await source.journey(customerId);
+  const [journey, customer] = await Promise.all([
+    source.journey(customerId),
+    source.getCustomer(customerId),
+  ]);
   if (!journey) {
     return NextResponse.json(
       { error: "No Account Aggregator binding for this customer" },
@@ -38,13 +41,17 @@ export async function POST(req: NextRequest) {
   }
 
   const primary = journey.accounts[0];
+  const kyc = toKyc(primary);
   return NextResponse.json({
     status: journey.status,
     steps: journey.steps,
     consentHandle: journey.consentHandle,
     consentId: journey.consentId,
     linkRefNumbers: journey.linkRefNumbers,
-    kyc: toKyc(primary),
+    // The AA returns the holder name as one unspaced run; core banking has it
+    // as first/last. Prefer the readable one so the confirmation screen does
+    // not greet the customer as "Priyapatil".
+    kyc: kyc && { ...kyc, name: customer?.name || kyc.name },
     balance: balanceOf(journey.accounts),
     transactions: transactionsOf(journey.accounts),
     paymentModes: modeBreakdown(journey.accounts),

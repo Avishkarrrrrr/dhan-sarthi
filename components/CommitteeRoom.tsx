@@ -9,6 +9,7 @@ import type {
   ComplianceVerdict,
   EscalationTicket,
   FinalAnswer,
+  RiskProfile,
 } from "@/lib/contracts/types";
 import { streamCommittee } from "@/lib/client/api";
 import { ASSET_LABELS } from "@/lib/format";
@@ -65,7 +66,7 @@ const CLASS_COLOUR: Record<AssetClass, string> = {
   cash: "#94A3B8",
 };
 
-export function CommitteeRoom({ customerId }: { customerId: string }) {
+export function CommitteeRoom({ customerId, riskProfile }: { customerId: string; riskProfile?: RiskProfile }) {
   const [seats, setSeats] = useState<Record<string, Seat>>({});
   const [phase, setPhase] = useState<Phase>("idle");
   const [allocation, setAllocation] = useState<Allocation | null>(null);
@@ -131,6 +132,7 @@ export function CommitteeRoom({ customerId }: { customerId: string }) {
           }
         },
         controller.signal,
+        riskProfile,
       );
     } catch (err) {
       if (!controller.signal.aborted) {

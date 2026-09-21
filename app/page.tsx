@@ -9,8 +9,10 @@ import { GoalPlanner } from "@/components/GoalPlanner";
 import { StrategyStudio } from "@/components/StrategyStudio";
 import { CompanyLens } from "@/components/CompanyLens";
 import { TrustPanel } from "@/components/TrustPanel";
+import { Onboarding } from "@/components/Onboarding";
 import { fetchCustomers, fetchProfile } from "@/lib/client/api";
 import type { Customer, CustomerSummary, Holding } from "@/lib/data/types";
+import type { RiskProfile } from "@/lib/contracts/types";
 
 /**
  * The app shell.
@@ -29,6 +31,31 @@ export default function Home() {
 
   const [screen, setScreen] = useState<Screen>("advisor");
   const [prefill, setPrefill] = useState<string | undefined>();
+
+  // First run shows onboarding. Remembered per browser so a repeat visitor is
+  // not made to sign up again — but a judge can replay it from the pitch rail.
+  const [onboarding, setOnboarding] = useState(false);
+  const [riskProfile, setRiskProfile] = useState<RiskProfile | undefined>();
+
+  useEffect(() => {
+    try {
+      setOnboarding(localStorage.getItem("dhan-sarthi.onboarded") !== "1");
+    } catch {
+      // Private browsing or blocked storage: show the app, not a dead screen.
+      setOnboarding(false);
+    }
+  }, []);
+
+  const finishOnboarding = useCallback((profile: RiskProfile) => {
+    setRiskProfile(profile);
+    setOnboarding(false);
+    setScreen("trust");
+    try {
+      localStorage.setItem("dhan-sarthi.onboarded", "1");
+    } catch {
+      /* nothing to remember it with; the flow still completed */
+    }
+  }, []);
 
   // Portfolio the user can edit: bank-linked accounts plus added investments.
   const [holdings, setHoldings] = useState<Holding[]>([]);
@@ -98,6 +125,20 @@ export default function Home() {
           </p>
         )}
 
+        <button
+          onClick={() => {
+            try {
+              localStorage.removeItem("dhan-sarthi.onboarded");
+            } catch {
+              /* ignore */
+            }
+            setOnboarding(true);
+          }}
+          className="mt-4 block text-xs font-medium text-brand-green underline underline-offset-2"
+        >
+          Replay the onboarding journey →
+        </button>
+
         <div className="mt-6 rounded-2xl border border-brand-light bg-white/70 p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/50">Try a customer</p>
           <div className="space-y-2">
@@ -119,6 +160,7 @@ export default function Home() {
 
       <PhoneFrame>
         {/* App header */}
+        {!onboarding && (
         <header className="z-20 flex shrink-0 items-center justify-between bg-brand-deep px-4 pb-3 pt-8 text-white">
           <div>
             <p className="text-[11px] text-white/60">Good day,</p>
@@ -137,6 +179,7 @@ export default function Home() {
             ))}
           </select>
         </header>
+        )}
 
         {loadError && (
           <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
@@ -144,7 +187,9 @@ export default function Home() {
           </div>
         )}
 
-        {!customer ? (
+        {onboarding && customerId ? (
+          <Onboarding customerId={customerId} onDone={finishOnboarding} />
+        ) : !customer ? (
           <div className="flex flex-1 items-center justify-center p-8 text-sm text-ink/50">Loading your 360° view…</div>
         ) : (
           <>
@@ -167,14 +212,14 @@ export default function Home() {
                 onAskAdvisor={askAdvisor}
               />
             )}
-            {screen === "trust" && <TrustPanel customerId={customerId} />}
+            {screen === "trust" && <TrustPanel customerId={customerId} riskProfile={riskProfile} />}
             {screen === "planner" && <GoalPlanner customerId={customerId} onAskAdvisor={askAdvisor} />}
             {screen === "strategy" && <StrategyStudio onAskAdvisor={askAdvisor} />}
             {screen === "lens" && <CompanyLens onAskAdvisor={askAdvisor} />}
           </>
         )}
 
-        <NavBar active={screen} onChange={setScreen} />
+        {!onboarding && <NavBar active={screen} onChange={setScreen} />}
       </PhoneFrame>
     </main>
   );

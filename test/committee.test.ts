@@ -6,6 +6,7 @@ import { ASSET_CLASSES, GROWTH_CLASSES, sumOf } from "@/lib/contracts/types";
 import { COMMITTEE, markets, treasury, macro, bonds } from "@/lib/agents/agents";
 import { BASE_MODELS, fuseTilts, strategise } from "@/lib/agents/strategist";
 import { collectCommittee } from "@/lib/agents/committee";
+import { deriveRiskProfile } from "@/components/Onboarding";
 import * as audit from "@/lib/audit/log";
 import * as queue from "@/lib/hitl/queue";
 
@@ -196,5 +197,32 @@ describe("placeholder statement narration", () => {
   it("still names a genuine category", () => {
     const view = COMMITTEE.find((c) => c.id === "behaviour")!.agent({ snapshot, market: calm });
     expect(view.sources.join(" ")).toMatch(/Rent|Groceries|Dining/);
+  });
+});
+
+describe("risk profile from onboarding", () => {
+  it("derives a profile from horizon and loss reaction together", () => {
+    // Horizon is the binding constraint: comfortable with risk but needing the
+    // money in two years is still a conservative case.
+    expect(deriveRiskProfile(2, 2)).toBe("conservative");
+    expect(deriveRiskProfile(15, 2)).toBe("aggressive");
+    expect(deriveRiskProfile(15, 0)).toBe("conservative");
+    expect(deriveRiskProfile(6, 1)).toBe("moderate");
+  });
+
+  it("changes the proposal the strategist starts from", () => {
+    const views = COMMITTEE.map(({ agent }) => agent({ snapshot, market: calm }));
+
+    const cautious = clone(snapshot);
+    cautious.ips.riskProfile = "conservative";
+    const bold = clone(snapshot);
+    bold.ips.riskProfile = "aggressive";
+
+    const a = strategise(views, cautious);
+    const b = strategise(views, bold);
+
+    // The same committee, two profiles: the aggressive plan must carry more
+    // growth. Answering the questions honestly has to visibly change advice.
+    expect(sumOf(b.weights, GROWTH_CLASSES)).toBeGreaterThan(sumOf(a.weights, GROWTH_CLASSES));
   });
 });

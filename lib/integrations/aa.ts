@@ -256,7 +256,7 @@ export function toKyc(account: AaAccount | undefined, now = new Date()): KycProf
       (holder.ckycCompliance || "").toLowerCase() === "true",
     maskedAccountNumber: account?.maskedAccountNumber ?? "",
     ifsc: account?.Summary?.ifsc ?? account?.Summary?.ifscCode ?? "",
-    branch: account?.Summary?.branch ?? "",
+    branch: titleCase(account?.Summary?.branch ?? ""),
     accountOpenDate: isoDay(account?.Summary?.openingDate),
   };
 }
