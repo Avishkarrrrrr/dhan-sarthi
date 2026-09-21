@@ -312,13 +312,21 @@ const emergencyFund: Rule = (a, s) => {
     ];
   }
 
-  const liquid = sumOf(a.weights, LIQUID_CLASSES) * s.netWorth;
+  /*
+   * Measured net of anything the bank has under lien (API 362). A buffer that
+   * counts locked money is short by exactly that much, and a liquidity rule
+   * whose number is not real is not a liquidity rule.
+   */
+  const locked = s.lienMarked ?? 0;
+  const liquid = Math.max(0, sumOf(a.weights, LIQUID_CLASSES) * s.netWorth - locked);
   const months = liquid / monthly;
   if (months >= EMERGENCY_MONTHS) return [];
   return [
     {
       rule: "liquidity.emergency_fund",
-      detail: `Leaves ${months.toFixed(1)} months of expenses liquid, against a ${EMERGENCY_MONTHS}-month buffer.`,
+      detail:
+        `Leaves ${months.toFixed(1)} months of expenses liquid, against a ${EMERGENCY_MONTHS}-month buffer` +
+        (locked > 0 ? `, after setting aside ₹${locked.toLocaleString("en-IN")} the bank has under lien.` : "."),
       severity: months < EMERGENCY_MONTHS / 2 ? "high" : "med",
     },
   ];

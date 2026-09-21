@@ -128,13 +128,34 @@ export function monthlyExpenses(c: Customer): number {
   return spendingInsights(c).reduce((s, x) => s + x.total, 0);
 }
 
+/**
+ * Liquid money the customer can actually use.
+ *
+ * Cash and deposits minus anything under lien. The emergency-fund rule and the
+ * treasury desk both measure cover on this rather than on the headline
+ * balance: a buffer that includes ₹5,000 the bank has locked is ₹5,000 shorter
+ * than it claims, and the whole point of the rule is that the number is real.
+ */
+export function investibleLiquid(c: Customer): number {
+  return (c.holdings ?? [])
+    .filter((h) => h.assetClass === "cash" || h.assetClass === "fd")
+    .reduce((s, h) => s + Math.max(0, h.value - (h.lienAmount ?? 0)), 0);
+}
+
+/** Everything the bank has locked, across all holdings. */
+export function lienMarked(c: Customer): number {
+  return (c.holdings ?? []).reduce((s, h) => s + (h.lienAmount ?? 0), 0);
+}
+
 export function buildSnapshot(c: Customer, now = new Date()): FinancialSnapshot {
+  const locked = lienMarked(c);
   return {
     customer: c,
     netWorth: netWorth(c),
     allocationByClass: allocationByClass(c),
     xray: buildXray(c),
     investableSurplus: Math.max(0, monthlySurplus(c)),
+    ...(locked > 0 ? { lienMarked: locked } : {}),
     ips: buildIps(c, now),
   };
 }

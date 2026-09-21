@@ -6,6 +6,7 @@ import {
   isoDay,
   toCustomer,
   toHoldings,
+  lienAmount,
   toTransaction,
   type AccountEnquiry,
   type StatementResult,
@@ -194,5 +195,51 @@ describe("client request shapes", () => {
       new Response(JSON.stringify({ message: "acctType is mandatory" }), { status: 400 }),
     );
     await expect(idbi.getCustomerAccounts("1")).rejects.toThrow(/acctType is mandatory/);
+  });
+});
+
+/*
+ * API 362. IDBI's own annotation reads "(PS1) showing investible vs locked
+ * balance in wealth advisory" — they built it for this product, and until now
+ * we were not calling it.
+ */
+describe("lien enquiry", () => {
+  const lien = (over: Record<string, unknown> = {}) => ({
+    result: {
+      acctId: "660100100003",
+      moduleType: "DEPOSIT",
+      bankInfo: {
+        lienDetails: {
+          newLienAmt: { amountValue: "5000", currencyCode: "INR" },
+          lienDate: { startDate: "2026-07-09", endDate: "2027-07-08" },
+          reasonCode: "ACCOUNT_LIEN",
+          isDeleted: "N",
+          ...over,
+        },
+      },
+    },
+  });
+
+  const NOW = new Date("2026-09-21T00:00:00Z");
+
+  it("reads the live shape", () => {
+    expect(lienAmount(lien(), NOW)).toBe(5000);
+  });
+
+  it("frees the money once the lien is lifted", () => {
+    expect(lienAmount(lien({ isDeleted: "Y" }), NOW)).toBe(0);
+  });
+
+  /*
+   * Reporting an expired lien as locked understates what the customer can
+   * invest — the same error as overstating it, pointed the other way.
+   */
+  it("frees the money once the lien has expired", () => {
+    expect(lienAmount(lien({ lienDate: { startDate: "2024-01-01", endDate: "2025-01-01" } }), NOW)).toBe(0);
+  });
+
+  it("treats a missing lien as no lien, not as a failure", () => {
+    expect(lienAmount(undefined, NOW)).toBe(0);
+    expect(lienAmount({ result: { acctId: "x", moduleType: "DEPOSIT" } }, NOW)).toBe(0);
   });
 });

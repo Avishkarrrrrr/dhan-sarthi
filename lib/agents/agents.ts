@@ -43,7 +43,10 @@ const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const treasury: Agent = ({ snapshot }) => {
   const monthly = monthlyExpenses(snapshot.customer);
   const liquidWeight = sumOf(snapshot.allocationByClass, LIQUID_CLASSES);
-  const months = monthly > 0 ? (liquidWeight * snapshot.netWorth) / monthly : 99;
+  // Net of any lien: the treasury desk's whole job is knowing what is actually
+  // available, and locked money is visible to the customer but not to them.
+  const liquid = Math.max(0, liquidWeight * snapshot.netWorth - (snapshot.lienMarked ?? 0));
+  const months = monthly > 0 ? liquid / monthly : 99;
 
   // Short of a buffer: pull towards cash. Comfortably over: release some.
   const gap = (6 - months) / 6;

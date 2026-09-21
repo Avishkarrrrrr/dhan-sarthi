@@ -213,6 +213,14 @@ export function AccountsPanel({
                   <p className="text-sm font-medium text-ink">{h.name}</p>
                   <p className="text-[10px] text-ink/45">
                     {h.assetClass === "fd" ? "Fixed Deposit" : "Bank account"} · IDBI Bank
+                    {h.lienAmount ? (
+                      // Said where the balance is shown, not in a footnote. A
+                      // customer who plans around money the bank has locked
+                      // finds out at the worst possible moment.
+                      <span className="ml-1 text-amber-700">
+                        · {inr(h.lienAmount)} under lien, not available
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <span className="text-sm font-semibold text-brand-deep">{inr(h.value)}</span>

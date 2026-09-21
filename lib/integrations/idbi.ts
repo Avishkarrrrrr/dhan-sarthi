@@ -35,6 +35,36 @@ export interface AccountEnquiry {
   acctBal?: { balType: string; balAmt: IdbiAmount }[];
 }
 
+/**
+ * API 362 — lien on an account.
+ *
+ * IDBI's own annotation on this API reads *"(PS1) showing investible vs locked
+ * balance in wealth advisory"* — they built it for exactly this product. A
+ * balance with a lien on it is money the customer can see and cannot spend,
+ * and advising on it as though it were free is how a plan quietly assumes
+ * funds that are not there.
+ */
+export interface LienDetails {
+  newLienAmt?: IdbiAmount;
+  oldLienAmt?: IdbiAmount;
+  lienDate?: { startDate: string; endDate: string };
+  reasonCode?: string;
+  remarks?: string;
+  /** "Y" means the lien has been lifted and the money is free again. */
+  isDeleted?: string;
+  lienId?: string;
+}
+
+export interface LienEnquiry {
+  result?: {
+    acctId: string;
+    moduleType: string;
+    acctType?: { schmCode: string; schmType: string };
+    bankInfo?: { branchId?: string; branchName?: string; lienDetails?: LienDetails };
+  };
+  errors?: unknown[];
+}
+
 export interface StatementTxn {
   pstdDate: string;
   transactionSummary: { txnAmt: IdbiAmount; txnDate: string; txnDesc: string; txnType: string; instrumentId?: string };
@@ -225,6 +255,18 @@ export const idbi = {
     return post<AccountEnquiry>("performAccountEnquirytest", { acctId }, signal);
   },
 
+  /**
+   * API 362 — lien enquiry.
+   *
+   * `moduleType` must be exactly `"DEPOSIT"`; the gateway rejects everything
+   * else with "moduleType does not match", and rejects any extra field outright
+   * ("Unknown field(s): branchId"). Found by probing, not from the spec sheet.
+   * A term deposit answers 400 "Data not found", the same as the statement API.
+   */
+  getAccountLien(acctId: string, signal?: AbortSignal) {
+    return post<LienEnquiry>("accountLienEnquirytest", { moduleType: "DEPOSIT", acctId }, signal);
+  },
+
   /** API 393 — full statement for a period. */
   getStatement(
     acid: string,
@@ -350,6 +392,23 @@ export function toHoldings(stmt: StatementResult, enquiry?: AccountEnquiry): Hol
   if (cash > 0) out.push({ assetClass: "cash" as AssetClass, name: "IDBI Savings Account", value: cash });
   if (fd > 0) out.push({ assetClass: "fd" as AssetClass, name: "IDBI Fixed Deposit", value: fd });
   return out;
+}
+
+/**
+ * The amount currently under lien, in INR.
+ *
+ * A lifted lien (`isDeleted: "Y"`) frees the money, and a lien whose end date
+ * has passed is spent — reporting either as locked would understate what the
+ * customer can actually invest, which is the same error as overstating it,
+ * pointed the other way.
+ */
+export function lienAmount(lien: LienEnquiry | undefined, now = new Date()): number {
+  const d = lien?.result?.bankInfo?.lienDetails;
+  if (!d) return 0;
+  if ((d.isDeleted ?? "N").toUpperCase() === "Y") return 0;
+  const end = d.lienDate?.endDate;
+  if (end && new Date(end).getTime() < now.getTime()) return 0;
+  return amt(d.newLienAmt);
 }
 
 /** Pull one balance type out of the enquiry's `acctBal` array. */

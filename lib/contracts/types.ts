@@ -52,6 +52,14 @@ export interface FinancialSnapshot {
   xray: PortfolioXray;
   /** Investable surplus per month, INR. */
   investableSurplus: number;
+  /**
+   * Balance the bank has locked (IDBI API 362), INR.
+   *
+   * Carried separately rather than netted off the holding, because the
+   * customer's statement shows the gross figure and a screen that silently
+   * disagreed with their passbook would be the more confusing error.
+   */
+  lienMarked?: number;
   ips: InvestmentPolicyStatement;
 }
 

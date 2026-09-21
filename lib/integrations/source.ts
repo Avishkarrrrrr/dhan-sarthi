@@ -1,7 +1,7 @@
 import type { Customer, CustomerSummary } from "@/lib/data/types";
 import type { CustomerRepository } from "@/lib/data/repository";
 import { selectRepository } from "@/lib/data/select";
-import { idbi, titleCase, toCustomer } from "./idbi";
+import { idbi, lienAmount, titleCase, toCustomer } from "./idbi";
 import { displayName, runConsentJourney, toKyc, type ConsentJourney, type KycProfile } from "./aa";
 
 /**
@@ -191,9 +191,12 @@ export class IdbiSource implements FinancialDataSource {
        * Identity and balances come from the enquiry; the statement only adds
        * transaction history.
        */
-      const [enquiryResult, stmtResult] = await Promise.allSettled([
+      const [enquiryResult, stmtResult, lienResult] = await Promise.allSettled([
         idbi.getAccountEnquiry(acctId),
         idbi.getStatement(acctId, binding.fromDate, binding.toDate, binding.branchId ?? "105"),
+        // API 362. IDBI's own annotation on it reads "showing investible vs
+        // locked balance in wealth advisory" — they built it for this.
+        idbi.getAccountLien(acctId),
       ]);
 
       if (enquiryResult.status === "rejected") throw enquiryResult.reason;
@@ -207,6 +210,18 @@ export class IdbiSource implements FinancialDataSource {
         ...advisory,
         ...(persona ? { persona } : {}),
       });
+
+      /*
+       * Mark the lien against the account it sits on. A term deposit answers
+       * "Data not found" here exactly as it does for the statement, so a
+       * missing lien means no lien — not a failed customer.
+       */
+      const locked = lienResult.status === "fulfilled" ? lienAmount(lienResult.value) : 0;
+      if (locked > 0) {
+        const account = customer.holdings.find((h) => h.assetClass === "cash")
+          ?? customer.holdings.find((h) => h.assetClass === "fd");
+        if (account) account.lienAmount = locked;
+      }
 
       // Identity from the AA, where the customer has consented. Age and city
       // were assumptions until this call existed; now they are the bank's own

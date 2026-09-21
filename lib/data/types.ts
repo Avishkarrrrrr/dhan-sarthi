@@ -20,6 +20,11 @@ export interface Holding {
    * rather than assuming a cost basis.
    */
   lots?: TaxLot[];
+  /**
+   * Money inside this holding that is locked (IDBI API 362). Visible to the
+   * customer, not available to them, and therefore not investible.
+   */
+  lienAmount?: number;
 }
 
 /** A transaction. `amount` > 0 is a credit (income), < 0 is a debit (spend). */
