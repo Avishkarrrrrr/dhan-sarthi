@@ -162,7 +162,13 @@ export function ChatPanel({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="phone-scroll flex-1 space-y-3 overflow-y-auto px-4 py-3">
+      <div ref={scrollRef} className="phone-scroll flex flex-1 flex-col space-y-3 overflow-y-auto px-4 py-3">
+        {/*
+          Before the first message this tab was a greeting, four chips and 250px
+          of white. The empty state now says what the advisor is standing on —
+          which is the answer to the question a first-time user actually has,
+          and the thing that distinguishes this from a chatbot.
+        */}
         {messages.length === 0 && (
           <>
             <Bubble role="assistant">{greeting}</Bubble>
@@ -175,6 +181,25 @@ export function ChatPanel({
                 >
                   {c}
                 </button>
+              ))}
+            </div>
+
+            <div className="mt-auto space-y-2 pt-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink/35">
+                What I am working from
+              </p>
+              {[
+                ["Your IDBI accounts", "Balances, deposits and transactions, read live with your consent."],
+                ["Seven specialist desks", "They deliberate, disagree, and settle on one recommendation."],
+                ["The bank's suitability rules", "Anything unsuitable is blocked before it reaches you."],
+              ].map(([title, detail]) => (
+                <div key={title} className="flex gap-2.5 rounded-xl bg-white/70 px-3 py-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-green" />
+                  <div>
+                    <p className="text-xs font-medium text-ink">{title}</p>
+                    <p className="text-[11px] leading-relaxed text-ink/55">{detail}</p>
+                  </div>
+                </div>
               ))}
             </div>
           </>
