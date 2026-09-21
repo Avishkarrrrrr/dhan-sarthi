@@ -1,5 +1,6 @@
 import type { AssetClass, Customer } from "@/lib/data/types";
 import { monthlySurplus, netWorth, spendingInsights } from "@/lib/finance/metrics";
+import { lookThrough } from "@/lib/finance/xray";
 import {
   ASSET_CLASSES,
   emptyWeights,
@@ -11,11 +12,10 @@ import {
 /**
  * Build a `FinancialSnapshot` from a `Customer`.
  *
- * Workstream C owns the eventual full version (true look-through, step-up SIP
- * math, Black-Litterman inputs). This is the honest subset we can compute from
- * what the bank actually returns today, so the trust layer can run against real
- * IDBI customers rather than only fixtures. Anything not derivable is left
- * empty rather than invented — `bySector` in particular.
+ * Everything here is computed from what the bank actually returns, so the
+ * trust layer runs against real IDBI customers rather than only fixtures.
+ * Anything not derivable is left empty or counted as unclassified rather than
+ * invented.
  */
 
 /** Class weights from holdings, 0..1. Sums to 1 unless the customer is empty. */
@@ -29,32 +29,55 @@ export function allocationByClass(c: Customer): Record<AssetClass, number> {
 }
 
 /**
- * Partial X-ray. `byStock` lists **direct equity only**: a diversified fund is
- * the opposite of single-stock risk, so counting it as one line would invert
- * the meaning of the concentration rules. Looking *through* funds to their real
- * constituents is Workstream C's job; until then `bySector` stays empty rather
- * than carrying an invented split into rules that act on it.
+ * The X-ray: what the customer actually owns, through every wrapper.
+ *
+ * The unwrapping itself lives in `lib/finance/xray.ts`, including the honest
+ * accounting for anything it could not model. What is assembled here is the
+ * contract shape the committee and the rules read — plus the class-level
+ * flags, which remain the only concentration signal available for a customer
+ * whose whole position is a fixed deposit and who therefore has no equity to
+ * look through.
  */
 export function buildXray(c: Customer): PortfolioXray {
-  const total = netWorth(c) || 1;
-  const byStock = c.holdings
-    .filter((h) => h.assetClass === "equity")
-    .map((h) => ({ name: h.name, weight: round4(h.value / total) }))
-    .sort((a, b) => b.weight - a.weight);
-
+  const lt = lookThrough(c);
   const weights = allocationByClass(c);
+
   const concentrationFlags: string[] = [];
   for (const k of ASSET_CLASSES) {
     if (weights[k] > 0.6) {
       concentrationFlags.push(`${k} ${pct(weights[k])} of portfolio in a single asset class`);
     }
   }
-  for (const s of byStock) {
+  for (const s of lt.byStock) {
     if (s.weight > 0.25) {
-      concentrationFlags.push(`${s.name} ${pct(s.weight)} of portfolio in one holding`);
+      concentrationFlags.push(`${s.name} ${pct(s.weight)} of portfolio in one company`);
     }
   }
-  return { byStock, bySector: [], overlapPct: 0, concentrationFlags };
+  if (lt.overlapPct > 0.25) {
+    concentrationFlags.push(
+      `${pct(lt.overlapPct)} of the equity money buys companies already held through another fund`,
+    );
+  }
+
+  return {
+    byStock: lt.byStock,
+    bySector: lt.bySector,
+    overlapPct: lt.overlapPct,
+    concentrationFlags,
+    effectiveEquityPct: lt.effectiveEquityPct,
+    headlineEquityPct: lt.headlineEquityPct,
+    unclassifiedPct: lt.unclassifiedPct,
+    stockCoverage: lt.stockCoverage,
+    vehicles: lt.vehicles.map(({ name, value, category, equityValue, classified }) => ({
+      name,
+      value,
+      category,
+      equityValue,
+      classified,
+    })),
+    asOf: lt.asOf,
+    source: lt.source,
+  };
 }
 
 /**

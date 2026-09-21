@@ -15,6 +15,7 @@ import {
   EMERGENCY_MONTHS,
   MAX_CREDIBLE_RETURN_PCT,
   MAX_GOLD,
+  MAX_OVERLAP,
   MAX_SECTOR,
   MAX_SINGLE_CLASS,
   MAX_SINGLE_STOCK,
@@ -191,32 +192,82 @@ const goldCap: Rule = (a) => {
 };
 
 /**
- * Sector concentration. Uses the X-ray look-through when it exists, and falls
- * back to the flags Workstream C already computed when it does not — rather
- * than silently passing a portfolio nobody has looked through.
+ * Sector concentration, from the X-ray look-through.
  *
- * The fallback flags describe the portfolio the customer *already holds*. A
- * class-level rewrite cannot fix a stock-level concentration, so they are
- * recorded as observations for the customer and the RM rather than as defects
- * that would hold up an otherwise suitable proposal.
+ * Judged against equity exposure, because that is the money actually exposed
+ * to the sector — against net worth, a portfolio could be entirely in one
+ * sector and still look tame beside a large fixed deposit.
+ *
+ * **Never `high`.** The concentration is in the book the customer already
+ * holds, and a class-level allocation cannot unpick which companies sit inside
+ * their funds; blocking on it would refuse every proposal for that customer,
+ * including perfectly suitable ones, with no way out — the same trap the
+ * emergency-fund rule had to be rescued from. It rises to `med`, which offers
+ * a rewrite, only when reducing the growth sleeve would genuinely reduce the
+ * exposure: either the proposal adds to that sleeve, or the concentration is
+ * severe enough that trimming it is worth doing on its own.
+ *
+ * When there is no equity to look through — a customer holding only a term
+ * deposit — the class-level flags are all the signal there is, so they are
+ * reported rather than passing a portfolio nobody has examined.
  */
-const sectorCap: Rule = (_a, s) => {
+const sectorCap: Rule = (a, s) => {
   const out: Violation[] = [];
+  const proposedGrowth = sumOf(a.weights, GROWTH_CLASSES);
+  const currentGrowth = sumOf(s.allocationByClass, GROWTH_CLASSES);
+  const addsToSleeve = proposedGrowth > currentGrowth + 0.02;
+
   for (const sector of s.xray.bySector) {
     if (sector.weight > MAX_SECTOR) {
+      const severe = sector.weight > SEVERE_SECTOR;
       out.push({
         rule: "concentration.sector",
-        detail: `${sector.sector} is ${pct(sector.weight)} of the portfolio, against a ${pct(MAX_SECTOR)} cap.`,
-        severity: sector.weight > SEVERE_SECTOR ? "high" : "med",
+        detail:
+          `${sector.sector} is ${pct(sector.weight)} of your equity, against a ${pct(MAX_SECTOR)} limit` +
+          (addsToSleeve ? ", and this plan puts more money into that sleeve." : "."),
+        severity: severe || addsToSleeve ? "med" : "low",
       });
     }
   }
+
+  /*
+   * Say how much of the equity the look-through could not model. The sector
+   * figures above are shares of *all* equity, so unmodelled holdings pull them
+   * down — the numbers understate concentration exactly when we know least,
+   * and a reader deserves to be told that rather than left to assume coverage.
+   */
+  const blind = s.xray.unclassifiedPct ?? 0;
+  if (blind > 0.3 && s.xray.bySector.length) {
+    out.push({
+      rule: "concentration.look_through_gap",
+      detail: `${pct(blind)} of the equity could not be looked through, so these sector figures are a floor, not a ceiling.`,
+      severity: "low",
+    });
+  }
+
   if (!s.xray.bySector.length) {
     for (const flag of s.xray.concentrationFlags) {
       out.push({ rule: "concentration.flagged", detail: flag, severity: "low" });
     }
   }
   return out;
+};
+
+/**
+ * Overlap. Two funds that each put 7% into the same bank are not diversifying
+ * each other, and a customer who bought the second one to spread risk has not.
+ * Advisory: it describes holdings, and the remedy is switching a fund, not
+ * moving money between asset classes.
+ */
+const fundOverlap: Rule = (_a, s) => {
+  if (s.xray.overlapPct <= MAX_OVERLAP) return [];
+  return [
+    {
+      rule: "concentration.overlap",
+      detail: `${pct(s.xray.overlapPct)} of your equity buys companies you already own through another fund — that money is not diversifying you.`,
+      severity: "low" as const,
+    },
+  ];
 };
 
 /**
@@ -311,6 +362,7 @@ export const POLICY_RULES: Rule[] = [
   singleClassCap,
   goldCap,
   sectorCap,
+  fundOverlap,
   singleStockCap,
   emergencyFund,
   credibleReturn,

@@ -35,10 +35,26 @@ export const SEVERE_SINGLE_CLASS = 0.8;
 /** Gold is a hedge, not a core holding. */
 export const MAX_GOLD = 0.2;
 
-/** Sector and single-stock caps, applied when the X-ray can see through. */
-export const MAX_SECTOR = 0.35;
-export const SEVERE_SECTOR = 0.45;
+/**
+ * Sector and single-stock caps, applied to what the X-ray sees through to.
+ *
+ * The sector cap is measured against **equity exposure**, not net worth, and
+ * sits above the Nifty's own financials weight (~37%) on purpose: an investor
+ * holding nothing but a plain index fund is not sector-concentrated, and a
+ * limit that flags them would be noise wearing a compliance badge. The single
+ * stock cap is against net worth, where a tenth of everything in one company
+ * is the right place to object.
+ */
+export const MAX_SECTOR = 0.45;
+export const SEVERE_SECTOR = 0.6;
 export const MAX_SINGLE_STOCK = 0.1;
+
+/**
+ * Duplicated equity exposure. Some overlap between any two Indian equity funds
+ * is unavoidable — they fish in the same 200 companies — so this is set where
+ * it stops being incidental and starts meaning the second fund was pointless.
+ */
+export const MAX_OVERLAP = 0.2;
 
 /** Months of expenses that must stay liquid before adding risk assets. */
 export const EMERGENCY_MONTHS = 6;

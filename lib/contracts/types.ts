@@ -7,8 +7,9 @@
  *  - `ComplianceVerdict.rewritten` is present for `block` as well as `rewrite`,
  *    because a block is far more persuasive when it also offers a safe
  *    alternative.
- *  - `PortfolioXray.bySector` may be empty until the look-through lands
- *    (Workstream C); rules degrade to class-level concentration when it is.
+ *  - `PortfolioXray.bySector` is a share of equity exposure rather than of net
+ *    worth, and carries provenance fields the spec does not list, because the
+ *    look-through runs on indicative category models and must say so.
  */
 import type {
   AssetClass,
@@ -55,11 +56,35 @@ export interface FinancialSnapshot {
 }
 
 export interface PortfolioXray {
+  /** Named companies reached through every wrapper, as a share of net worth. */
   byStock: { name: string; weight: number }[];
-  /** Empty until the true look-through lands; rules degrade gracefully. */
+  /**
+   * Sectors, as a share of **equity exposure** — not of net worth.
+   *
+   * A sector limit is judged against the equity sleeve, because that is the
+   * money exposed to it. Measured against net worth instead, a portfolio could
+   * be entirely in one sector and still look fine simply by holding a large
+   * fixed deposit beside it.
+   *
+   * Empty only when there is no equity to look through — which is the true
+   * state of a customer holding nothing but a term deposit, not a gap.
+   */
   bySector: { sector: string; weight: number }[];
-  overlapPct: number; // 0..1
+  overlapPct: number; // 0..1 of equity exposure, bought twice
   concentrationFlags: string[];
+  /** Equity once hybrids are unwrapped, as a share of net worth. */
+  effectiveEquityPct?: number;
+  /** What the class labels claim — equity + mutual_fund — for comparison. */
+  headlineEquityPct?: number;
+  /** Equity the look-through could not model, 0..1 of equity exposure. */
+  unclassifiedPct?: number;
+  /** Equity resolved to named companies, 0..1 of equity exposure. */
+  stockCoverage?: number;
+  /** Per-holding detail, so the screen can show its working. */
+  vehicles?: { name: string; value: number; category: string; equityValue: number; classified: boolean }[];
+  /** Provenance of the category models. Displayed, never hidden. */
+  asOf?: string;
+  source?: string;
 }
 
 /** The persistent grounding for the whole committee. */
