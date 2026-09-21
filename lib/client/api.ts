@@ -8,7 +8,15 @@ import type { CompanyAnalysis } from "@/lib/research/companies";
 import type { MptResult } from "@/lib/finance/mpt";
 import type { CustomerSummary, Transaction } from "@/lib/data/types";
 import type { JourneyStep, KycProfile } from "@/lib/integrations/aa";
-import type { AuditEntry, CommitteeEvent, ComplianceVerdict, Allocation, EscalationTicket, RiskProfile } from "@/lib/contracts/types";
+import type {
+  Allocation,
+  AuditEntry,
+  CommitteeEvent,
+  ComplianceVerdict,
+  EscalationTicket,
+  InvestmentPolicyStatement,
+  RiskProfile,
+} from "@/lib/contracts/types";
 
 export async function fetchProfile(id: string): Promise<ProfileResponse> {
   const res = await fetch(`/api/profile?id=${encodeURIComponent(id)}`);
@@ -284,11 +292,12 @@ export async function streamCommittee(
   onEvent: (e: CommitteeEvent) => void,
   signal?: AbortSignal,
   riskProfile?: RiskProfile,
+  ips?: InvestmentPolicyStatement,
 ): Promise<void> {
   const res = await fetch("/api/committee", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ customerId, riskProfile }),
+    body: JSON.stringify({ customerId, riskProfile, ips }),
     signal,
   });
   if (!res.ok || !res.body) {

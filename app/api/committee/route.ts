@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildSnapshot } from "@/lib/contracts/snapshot";
 import { runCommittee } from "@/lib/agents/committee";
 import { selectSource } from "@/lib/integrations/source";
-import type { RiskProfile } from "@/lib/contracts/types";
+import type { InvestmentPolicyStatement, RiskProfile } from "@/lib/contracts/types";
 
 const PROFILES: RiskProfile[] = ["conservative", "moderate", "aggressive"];
 
@@ -16,7 +16,12 @@ export const runtime = "nodejs";
  * leave no server state to clean up.
  */
 export async function POST(req: NextRequest) {
-  let body: { customerId?: string; query?: string; riskProfile?: RiskProfile } = {};
+  let body: {
+    customerId?: string;
+    query?: string;
+    riskProfile?: RiskProfile;
+    ips?: InvestmentPolicyStatement;
+  } = {};
   try {
     body = await req.json();
   } catch {
@@ -36,6 +41,16 @@ export async function POST(req: NextRequest) {
   if (body.riskProfile && PROFILES.includes(body.riskProfile)) {
     snapshot.ips.riskProfile = body.riskProfile;
     snapshot.customer.riskProfile = body.riskProfile;
+  }
+
+  /*
+   * A plan the customer built by voice replaces the one inferred from their
+   * goals on file. It is the whole reason for asking: the committee is
+   * grounded in what they said they want, not in what the bank guessed.
+   */
+  if (body.ips) {
+    snapshot.ips = { ...snapshot.ips, ...body.ips };
+    snapshot.customer.riskProfile = snapshot.ips.riskProfile;
   }
   const encoder = new TextEncoder();
 

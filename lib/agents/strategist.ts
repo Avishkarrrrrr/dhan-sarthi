@@ -1,4 +1,5 @@
 import { weightedMetrics } from "@/lib/finance/mpt";
+import { gapAnalysis } from "@/lib/finance/sip";
 import {
   ASSET_CLASSES,
   emptyWeights,
@@ -78,12 +79,25 @@ export function strategise(views: AgentView[], snapshot: FinancialSnapshot): All
   const m = weightedMetrics(weights);
   const movers = rankMovers(tilts);
 
+  const expectedReturnPct = Math.round(m.return * 1000) / 10;
+
+  /*
+   * The gap. Computed at the expected return of *this* allocation rather than
+   * a house assumption, so a more cautious plan honestly needs a larger monthly
+   * contribution — which is the trade-off the customer is actually making, and
+   * the one a single fixed return number would hide.
+   */
+  const gap = snapshot.ips.targetCorpus > 0
+    ? gapAnalysis(snapshot.ips, expectedReturnPct, snapshot.netWorth)
+    : undefined;
+
   return {
     weights,
-    expectedReturnPct: Math.round(m.return * 1000) / 10,
+    expectedReturnPct,
     volatilityPct: Math.round(m.volatility * 1000) / 10,
     rationale: buildRationale(snapshot.ips.riskProfile, views, movers),
     contributingViews: views.map((v) => v.agentId),
+    ...(gap ? { gap } : {}),
   };
 }
 

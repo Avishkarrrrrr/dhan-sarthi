@@ -2,10 +2,18 @@
 
 import { useState } from "react";
 import type { AssetClass } from "@/lib/data/types";
-import type { Allocation, RiskProfile, Severity, Violation } from "@/lib/contracts/types";
+import type {
+  Allocation,
+  InvestmentPolicyStatement,
+  RiskProfile,
+  Severity,
+  Violation,
+} from "@/lib/contracts/types";
 import { postCompliance, type ComplianceResponse } from "@/lib/client/api";
 import { CommitteeRoom } from "./CommitteeRoom";
-import { ASSET_LABELS } from "@/lib/format";
+import { VoiceInterview } from "./VoiceInterview";
+import { Mic } from "lucide-react";
+import { ASSET_LABELS, inr } from "@/lib/format";
 
 /**
  * The trust layer, on screen.
@@ -72,6 +80,14 @@ const STATUS_STYLE: Record<ComplianceResponse["status"], { chip: string; label: 
 };
 
 export function TrustPanel({ customerId, riskProfile }: { customerId: string; riskProfile?: RiskProfile }) {
+  /*
+   * Stage 2, before stage 3. The committee can run on the plan inferred from
+   * the customer's goals on file, but it is a far better answer when it runs
+   * on the plan they described out loud — so the interview sits above it and
+   * says so, rather than being buried somewhere they would never find it.
+   */
+  const [interviewing, setInterviewing] = useState(false);
+  const [ips, setIps] = useState<InvestmentPolicyStatement | undefined>();
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [verdict, setVerdict] = useState<ComplianceResponse | null>(null);
   const [running, setRunning] = useState(false);
@@ -108,7 +124,34 @@ export function TrustPanel({ customerId, riskProfile }: { customerId: string; ri
         </p>
       </header>
 
-      <CommitteeRoom customerId={customerId} riskProfile={riskProfile} />
+      {interviewing ? (
+        <section className="overflow-hidden rounded-2xl border border-brand-light bg-white shadow-soft">
+          <div className="flex items-center justify-between border-b border-brand-light px-4 py-2.5">
+            <p className="text-sm font-semibold text-brand-deep">Building your plan</p>
+            <button
+              onClick={() => setInterviewing(false)}
+              className="text-xs font-medium text-ink/50 hover:text-ink/80"
+            >
+              Close
+            </button>
+          </div>
+          <div className="h-[26rem]">
+            <VoiceInterview
+              customerId={customerId}
+              onComplete={(plan) => {
+                setIps(plan);
+                // Straight back to the committee: the plan exists to be acted
+                // on, and making them find their way back would waste it.
+                setTimeout(() => setInterviewing(false), 2200);
+              }}
+            />
+          </div>
+        </section>
+      ) : (
+        <PlanBar ips={ips} onStart={() => setInterviewing(true)} />
+      )}
+
+      <CommitteeRoom customerId={customerId} riskProfile={riskProfile} ips={ips} />
 
       {/* Adversarial proposals, to show the checks bite */}
       <section className="rounded-2xl border border-brand-light bg-white p-4 shadow-soft">
@@ -309,5 +352,58 @@ function countBy(violations: Violation[]): Record<Severity, number> {
   return violations.reduce(
     (acc, v) => ({ ...acc, [v.severity]: (acc[v.severity] ?? 0) + 1 }),
     { high: 0, med: 0, low: 0 } as Record<Severity, number>,
+  );
+}
+
+/**
+ * Either an invitation to describe the plan, or the plan itself.
+ *
+ * Shown as a strip rather than a panel: before the interview it is a single
+ * call to action, and afterwards it is the one-line summary of what the
+ * committee is now working from.
+ */
+function PlanBar({
+  ips,
+  onStart,
+}: {
+  ips?: InvestmentPolicyStatement;
+  onStart: () => void;
+}) {
+  if (!ips) {
+    return (
+      <button
+        onClick={onStart}
+        className="flex w-full items-center gap-3 rounded-2xl border border-brand-green/30 bg-white p-4 text-left shadow-soft transition-colors hover:bg-brand-green/5"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-green/10 text-brand-green">
+          <Mic className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-brand-deep">
+            Tell me what you are planning for
+          </span>
+          <span className="block text-[11px] leading-relaxed text-ink/55">
+            Eight questions, by voice or typed. Everything below is grounded in your answers.
+          </span>
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <section className="rounded-2xl border border-brand-green/30 bg-brand-light/40 p-4">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-brand-deep">Your plan</p>
+        <button onClick={onStart} className="text-[11px] font-medium text-brand-green">
+          Change
+        </button>
+      </div>
+      <p className="text-xs leading-relaxed text-ink/70">
+        {inr(ips.monthlySip)} a month
+        {ips.annualStepUpPct > 0 && `, rising ${ips.annualStepUpPct}% a year`}, for{" "}
+        {ips.horizonYears} years, towards {inr(ips.targetCorpus)} — as a {ips.riskProfile}{" "}
+        investor.
+      </p>
+    </section>
   );
 }

@@ -97,6 +97,47 @@ export interface InvestmentPolicyStatement {
   goals: Goal[];
 }
 
+// ============ STAGE 2 — DISCOVER (the voice interview) ============
+
+export type DiscoverySlot =
+  | "shortTermGoals"
+  | "longTermGoals"
+  | "horizonYears"
+  | "targetCorpus"
+  | "monthlyInvestable"
+  | "annualStepUpPct"
+  | "riskAppetite"
+  | "liquidityBufferMonths";
+
+/** One question asked and answered. The transcript is kept verbatim. */
+export interface DiscoveryTurn {
+  slot: DiscoverySlot;
+  askedText: string;
+  userTranscript: string;
+  extracted: Record<string, unknown>;
+  confidence: number; // 0..1 — low means ask again
+}
+
+export interface DiscoveryState {
+  sessionId: string;
+  customerId: string;
+  language: string;
+  filled: Record<string, unknown>;
+  pending: DiscoverySlot[];
+  turns: DiscoveryTurn[];
+  status: "in_progress" | "confirming" | "complete";
+  /** Things worth saying out loud, like a stated SIP above the real surplus. */
+  warnings: string[];
+}
+
+export interface DiscoveryTurnResponse {
+  state: DiscoveryState;
+  /** What the avatar says next, ready to speak. */
+  spokenText: string;
+  complete: boolean;
+  ips?: InvestmentPolicyStatement;
+}
+
 // ============ AGENT LAYER (Workstream A) ============
 
 export type AgentId =

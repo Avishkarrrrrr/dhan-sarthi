@@ -11,6 +11,7 @@ import type {
   ComplianceVerdict,
   EscalationTicket,
   FinalAnswer,
+  InvestmentPolicyStatement,
   RiskProfile,
 } from "@/lib/contracts/types";
 import { streamCommittee } from "@/lib/client/api";
@@ -69,7 +70,16 @@ const CLASS_COLOUR: Record<AssetClass, string> = {
   cash: "#94A3B8",
 };
 
-export function CommitteeRoom({ customerId, riskProfile }: { customerId: string; riskProfile?: RiskProfile }) {
+export function CommitteeRoom({
+  customerId,
+  riskProfile,
+  ips,
+}: {
+  customerId: string;
+  riskProfile?: RiskProfile;
+  /** The plan built by voice, when there is one. It grounds every desk. */
+  ips?: InvestmentPolicyStatement;
+}) {
   const [seats, setSeats] = useState<Record<string, Seat>>({});
   const [phase, setPhase] = useState<Phase>("idle");
   const [allocation, setAllocation] = useState<Allocation | null>(null);
@@ -136,6 +146,7 @@ export function CommitteeRoom({ customerId, riskProfile }: { customerId: string;
         },
         controller.signal,
         riskProfile,
+        ips,
       );
     } catch (err) {
       if (!controller.signal.aborted) {
