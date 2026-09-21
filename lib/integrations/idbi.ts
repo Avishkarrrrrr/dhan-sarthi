@@ -71,10 +71,106 @@ export interface ConsentHandleResponse {
   data: { status: string; consent_handle: string };
 }
 
+// ---- Account Aggregator payloads (APIs 739 / 595) ----
+
+/**
+ * The account holder as the AA network reports them. This is the only place
+ * the bank gives us identity — date of birth, PAN, address, nominee and CKYC
+ * status are all absent from core banking.
+ */
+export interface AaHolder {
+  name: string;
+  dob: string; // yyyy-mm-dd
+  mobile: string;
+  email: string;
+  pan: string;
+  address: string;
+  nominee: string;
+  landline?: string;
+  /** 739 spells this `ckycRegistered` ("YES"), 595 `ckycCompliance` ("true"). */
+  ckycRegistered?: string;
+  ckycCompliance?: string;
+}
+
+/**
+ * An AA transaction. Richer than the core-banking statement: it carries the
+ * payment rail (`mode`) and a real narration instead of a serial description.
+ *
+ * The timestamp field name differs between the two APIs — 739 returns
+ * `transactionTimestamp`, 595 `transactionTimeStamp` and `transactionDateTime`.
+ * Read all three; trusting one silently loses every date on the other API.
+ */
+export interface AaTransaction {
+  txnId: string;
+  type: string; // DEBIT | CREDIT
+  mode: string; // UPI | NEFT | REMITTANCE | OTHERS | ...
+  amount: string;
+  narration: string;
+  reference?: string;
+  currentBalance?: string;
+  balance?: string;
+  valueDate: string;
+  transactionTimestamp?: string;
+  transactionTimeStamp?: string;
+  transactionDateTime?: string;
+}
+
+export interface AaAccount {
+  linkReferenceNumber: string;
+  maskedAccountNumber: string;
+  fiType: string; // DEPOSIT in this sandbox
+  bank: string;
+  Profile?: { Holders?: { type: string; Holder: AaHolder[] } };
+  Summary?: {
+    currentBalance?: string;
+    currency?: string;
+    accountType?: string;
+    accountSubType?: string;
+    branch?: string;
+    ifsc?: string;
+    ifscCode?: string;
+    micrCode?: string;
+    openingDate?: string;
+    status?: string;
+    balanceDateTime?: string;
+  };
+  Transactions?: { startDate?: string; endDate?: string; Transaction?: AaTransaction[] };
+}
+
+export interface AaStatementResponse {
+  ver: string;
+  status: string;
+  data?: AaAccount[];
+  errorCode?: string | null;
+  errorMsg?: string | null;
+}
+
+/** A consent as 591 reports it, including the accounts it covers. */
+export interface ConsentListEntry {
+  consentID: string;
+  status: string;
+  consent_handle: string;
+  productID?: string;
+  accountID: string;
+  aaId?: string;
+  vua: string;
+  consentCreationData?: string;
+  accounts?: {
+    fipName: string;
+    fipId: string;
+    accountType: string;
+    linkReferenceNumber: string;
+    maskedAccountNumber: string;
+    fiType: string;
+  }[];
+}
+
 export interface ConsentListResponse {
   status: string;
   ver: string;
-  data: { consentID: string; status: string; consent_handle: string; accountID: string; vua: string }[];
+  data: ConsentListEntry[];
+  errorCode?: string | null;
+  errorMsg?: string | null;
 }
 
 /** `amountValue` arrives as a string; parse defensively so a bad value is 0, never NaN. */
@@ -185,7 +281,7 @@ export const idbi = {
 
   /** API 739 — AA-sourced account data under an approved consent. */
   getAaStatement(consentId: string, linkRefNumber: string[], signal?: AbortSignal) {
-    return post<Record<string, unknown>>(
+    return post<AaStatementResponse>(
       "getAccountStatementFromFinProtest",
       { consentId, linkRefNumber },
       signal,
@@ -194,7 +290,7 @@ export const idbi = {
 
   /** API 595 — MoneyOne FIU statement. Path differs from the display name. */
   getMoneyOneStatement(consentId: string, linkRefNumber: string[], signal?: AbortSignal) {
-    return post<Record<string, unknown>>("getAccountStatementtest", { consentId, linkRefNumber }, signal);
+    return post<AaStatementResponse>("getAccountStatementtest", { consentId, linkRefNumber }, signal);
   },
 };
 

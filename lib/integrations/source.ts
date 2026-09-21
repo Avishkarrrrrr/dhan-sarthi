@@ -2,6 +2,7 @@ import type { Customer, CustomerSummary } from "@/lib/data/types";
 import type { CustomerRepository } from "@/lib/data/repository";
 import { selectRepository } from "@/lib/data/select";
 import { idbi, toCustomer } from "./idbi";
+import { displayName, runConsentJourney, toKyc, type ConsentJourney, type KycProfile } from "./aa";
 
 /**
  * Where a customer's 360° view comes from. `mock` serves the bundled demo
@@ -41,6 +42,13 @@ export interface IdbiCustomerBinding {
   /** Statement window. The sandbox holds May 2025 data. */
   fromDate: string;
   toDate: string;
+  /** AA party identifiers. Present means the consent journey can run for them. */
+  mobile?: string;
+  vua?: string;
+  /**
+   * Advisory fields core banking does not expose. `age` here is a fallback
+   * only — when the AA consent is active, the real date of birth wins.
+   */
   advisory: Pick<Customer, "age" | "monthlyIncome" | "riskProfile" | "goals"> & { persona?: string };
 }
 
@@ -51,6 +59,8 @@ export const IDBI_BINDINGS: IdbiCustomerBinding[] = [
     cifId: "98655854",
     fromDate: "2025-05-01T00:00:00.000",
     toDate: "2025-05-31T00:00:00.000",
+    mobile: "9988776655",
+    vua: "9988776655@onemoney",
     advisory: {
       age: 32,
       monthlyIncome: 120000,
@@ -94,11 +104,89 @@ export class IdbiSource implements FinancialDataSource {
         idbi.getStatement(binding.acctId, binding.fromDate, binding.toDate),
       ]);
       const { persona, ...advisory } = binding.advisory;
-      return toCustomer(binding.id, enquiry, stmt, { ...advisory, ...(persona ? { persona } : {}) });
+      const customer = toCustomer(binding.id, enquiry, stmt, {
+        ...advisory,
+        ...(persona ? { persona } : {}),
+      });
+
+      // Identity from the AA, where the customer has consented. Age and city
+      // were assumptions until this call existed; now they are the bank's own
+      // record. Best-effort — core banking data stands on its own if it fails.
+      const kyc = await this.kyc(binding);
+      return kyc ? applyKyc(customer, kyc) : customer;
     } catch {
       return this.fallback.getCustomer(id);
     }
   }
+
+  /**
+   * Identity, cached.
+   *
+   * A consent is granted once and stays valid; re-running the whole journey on
+   * every profile request would add three round trips to every page load for
+   * data that does not change. The journey endpoint always runs live — that is
+   * the demo — but the identity overlay reads through this.
+   */
+  private static kycCache = new Map<string, { at: number; kyc?: KycProfile }>();
+
+  /** Run the consent journey for a bound customer. Undefined if not bound. */
+  async journey(id: string): Promise<ConsentJourney | undefined> {
+    const binding = this.bindings.find((b) => b.id === id);
+    if (!binding?.mobile || !binding.vua) return undefined;
+    return runConsentJourney({
+      mobile: binding.mobile,
+      accountId: binding.acctId,
+      vua: binding.vua,
+    });
+  }
+
+  private async kyc(binding: IdbiCustomerBinding): Promise<KycProfile | undefined> {
+    if (!binding.mobile || !binding.vua) return undefined;
+
+    const cached = IdbiSource.kycCache.get(binding.id);
+    if (cached && Date.now() - cached.at < KYC_TTL_MS) return cached.kyc;
+
+    try {
+      const journey = await runConsentJourney({
+        mobile: binding.mobile,
+        accountId: binding.acctId,
+        vua: binding.vua,
+      });
+      const kyc = toKyc(journey.accounts[0]);
+      IdbiSource.kycCache.set(binding.id, { at: Date.now(), kyc });
+      return kyc;
+    } catch {
+      // Cache the miss too, briefly: a sandbox outage should not mean three
+      // failing round trips on every subsequent page load.
+      IdbiSource.kycCache.set(binding.id, { at: Date.now(), kyc: undefined });
+      return undefined;
+    }
+  }
+
+  /** Test seam. */
+  static clearKycCache(): void {
+    IdbiSource.kycCache.clear();
+  }
+}
+
+/** How long a granted consent's identity is reused before re-checking. */
+const KYC_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Overlay what the AA actually knows over what we had assumed.
+ *
+ * Only age and city are genuine upgrades — both were hardcoded guesses before
+ * the consent flow existed. The name is not: core banking returns it as
+ * structured first/last, the AA as one unspaced run, so the structured form
+ * wins and the AA is only a fallback.
+ */
+export function applyKyc(customer: Customer, kyc: KycProfile): Customer {
+  return {
+    ...customer,
+    name: displayName(customer.name, kyc.name),
+    age: kyc.age > 0 ? kyc.age : customer.age,
+    city: kyc.city || customer.city,
+  };
 }
 
 /**
