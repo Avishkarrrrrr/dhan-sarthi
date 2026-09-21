@@ -215,7 +215,7 @@ export default function Home() {
             {screen === "trust" && <TrustPanel customerId={customerId} riskProfile={riskProfile} />}
             {screen === "planner" && <GoalPlanner customerId={customerId} onAskAdvisor={askAdvisor} />}
             {screen === "strategy" && <StrategyStudio onAskAdvisor={askAdvisor} />}
-            {screen === "lens" && <CompanyLens onAskAdvisor={askAdvisor} />}
+            {screen === "lens" && <CompanyLens customer={customer} onAskAdvisor={askAdvisor} />}
           </>
         )}
 

@@ -1,12 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { listCompanies } from "@/lib/research/companies";
 import { postResearch } from "@/lib/client/api";
+import { lookThrough } from "@/lib/finance/xray";
 import type { CompanyAnalysis } from "@/lib/research/companies";
+import type { Customer } from "@/lib/data/types";
 
-export function CompanyLens({ onAskAdvisor }: { onAskAdvisor: (p: string) => void }) {
+export function CompanyLens({
+  customer,
+  onAskAdvisor,
+}: {
+  customer: Customer | null;
+  onAskAdvisor: (p: string) => void;
+}) {
   const featured = listCompanies();
+
+  /*
+   * The companies the customer already owns, through their funds. Research is
+   * far more useful pointed at something they hold than at a list of tickers
+   * chosen by us — and it is the look-through that knows which those are.
+   */
+  const owned = useMemo(
+    () => (customer ? lookThrough(customer).byStock.slice(0, 6) : []),
+    [customer],
+  );
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<CompanyAnalysis | null>(null);
@@ -40,8 +58,21 @@ export function CompanyLens({ onAskAdvisor }: { onAskAdvisor: (p: string) => voi
     { key: "verdict", label: "Final verdict", icon: "✅", tone: "bg-brand-deep/10 text-brand-deep" },
   ];
 
-  const sourceLabel =
-    source === "cached" ? "Cached analysis" : source === "gemini" ? "Gemini 3.5" : source === "unavailable" ? "Needs AI key" : source;
+  /*
+   * Name the engine that actually answered. This used to print the raw
+   * provider key for anything but Gemini, so the deployed build — which runs
+   * Claude on Bedrock under IDBI's own AWS account — badged its analysis
+   * "bedrock" in lowercase.
+   */
+  const SOURCE_LABELS: Record<string, string> = {
+    cached: "Bundled analysis",
+    gemini: "Google Gemini",
+    bedrock: "Claude on AWS Bedrock",
+    sarvam: "Sarvam AI",
+    unavailable: "AI engine unavailable",
+    fallback: "Offline analysis",
+  };
+  const sourceLabel = SOURCE_LABELS[source] ?? source;
 
   return (
     <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4">
@@ -68,6 +99,31 @@ export function CompanyLens({ onAskAdvisor }: { onAskAdvisor: (p: string) => voi
         </button>
       </div>
 
+      {owned.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-ink/45">
+            In your portfolio
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {owned.map((c) => (
+              <button
+                key={c.name}
+                onClick={() => analyze(c.name)}
+                className="rounded-full border border-brand-green/30 bg-brand-green/5 px-3 py-1.5 text-xs font-medium text-brand-green hover:bg-brand-green/10"
+              >
+                {c.name}
+                <span className="ml-1.5 tabular-nums text-brand-green/60">
+                  {Math.round(c.weight * 100)}%
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-ink/45">
+            Held through your funds — share of net worth.
+          </p>
+        </div>
+      )}
+
       {/* Featured quick-picks */}
       <div>
         <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-ink/45">Featured</p>
@@ -83,6 +139,27 @@ export function CompanyLens({ onAskAdvisor }: { onAskAdvisor: (p: string) => voi
           ))}
         </div>
       </div>
+
+      {/*
+        Before anything is analysed this screen was 600px of empty white. Say
+        what the tool does and what it will not do, which is also where the
+        "not a recommendation" line belongs — before the analysis, not only
+        after it.
+      */}
+      {!analysis && !loading && !error && (
+        <section className="rounded-2xl border border-dashed border-brand-light bg-white/60 p-4">
+          <h3 className="text-sm font-semibold text-brand-deep">What this does</h3>
+          <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-ink/65">
+            <li>· Reads the company&apos;s latest results and earnings call.</li>
+            <li>· Summarises the quarter, the risks, and what management has guided to.</li>
+            <li>· Ends with a plain verdict for a long-term investor — core holding, accumulate, or avoid.</li>
+          </ul>
+          <p className="mt-3 text-[10px] leading-relaxed text-ink/45">
+            Educational analysis of publicly disclosed information. No price targets, and never a
+            buy or sell instruction — pick a company above to start.
+          </p>
+        </section>
+      )}
 
       {loading && <p className="py-2 text-center text-sm text-ink/50">Analyzing {query}…</p>}
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-600">{error}</p>}
