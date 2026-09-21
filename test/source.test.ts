@@ -132,10 +132,19 @@ describe("IdbiSource", () => {
     expect(c?.name).toBe("Priya Sharma"); // the synthetic persona, not a crash
   });
 
-  it("takes the roster from the fallback, since the bank has no list endpoint", async () => {
+  it("names the roster from the bank, not from the bundled personas", async () => {
+    // The switcher used to show "Priya Sharma" beside a live profile for
+    // "Priya Patil". Ids come from the bindings; names come from the bank.
     const list = await new IdbiSource(undefined, new StubSource()).listCustomers();
-    expect(list).toHaveLength(1);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(list.length).toBeGreaterThanOrEqual(3);
+    expect(list[0].name).toBe("Priya Patil");
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("falls back to the binding label when the lookup fails", async () => {
+    fetchMock.mockRejectedValue(new Error("gateway down"));
+    const list = await new IdbiSource(undefined, new StubSource()).listCustomers();
+    expect(list.map((c) => c.name)).toEqual(["Priya Patil", "Arjun Mehta", "Neha Singh"]);
   });
 });
 
@@ -187,5 +196,46 @@ describe("account discovery (API 394)", () => {
     );
     const c = await new IdbiSource().getCustomer("priya");
     expect(c?.name).toBe("Priya Patil");
+  });
+});
+
+describe("a customer whose account has no statement", () => {
+  // A term deposit answers 400 "Data not found" from the statement API. That
+  // used to take the whole customer down: the source fell back to a synthetic
+  // persona that did not exist and the screen said "Unknown customer".
+  beforeEach(() => IdbiSource.clearKycCache());
+  afterEach(() => vi.unstubAllGlobals());
+
+  const termDeposit = {
+    ...enquiry,
+    acctId: "660100100008",
+    custId: "88823456",
+    acctType: { schmCode: "FD001", schmType: "TERM_DEPOSIT" },
+    personName: { firstName: "NEHA", middleName: "", lastName: "SINGH", name: "NEHASINGH", titlePrefix: "MS" },
+    bankInfo: { bankId: "IDBI001", name: "IDBIBANK", branchId: "107", branchName: "DELHI", postAddr: { city: "DELHI" } },
+    acctBal: [
+      { balType: "LEDGER", balAmt: { amountValue: "500000.00", currencyCode: "INR" } },
+      { balType: "AVAIL", balAmt: { amountValue: "500000.00", currencyCode: "INR" } },
+    ],
+  };
+
+  it("still resolves the customer from the enquiry alone", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (/performAccountEnquiry/.test(url)) return new Response(JSON.stringify(termDeposit), { status: 200 });
+        if (/getFullAccountStatement/.test(url)) {
+          return new Response(JSON.stringify({ message: "Data not found" }), { status: 400 });
+        }
+        return new Response(JSON.stringify({}), { status: 200 });
+      }),
+    );
+    const c = await new IdbiSource().getCustomer("neha");
+    expect(c?.name).toBe("Neha Singh");
+    expect(c?.city).toBe("Delhi");
+    // Worth five lakh, not zero: the deposit comes from the enquiry balances.
+    expect(c?.holdings).toHaveLength(1);
+    expect(c?.holdings[0]).toMatchObject({ assetClass: "fd", value: 500000 });
+    expect(c?.transactions).toHaveLength(0);
   });
 });

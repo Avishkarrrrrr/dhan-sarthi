@@ -1,7 +1,7 @@
 import type { Customer, CustomerSummary } from "@/lib/data/types";
 import type { CustomerRepository } from "@/lib/data/repository";
 import { selectRepository } from "@/lib/data/select";
-import { idbi, toCustomer } from "./idbi";
+import { idbi, titleCase, toCustomer } from "./idbi";
 import { displayName, runConsentJourney, toKyc, type ConsentJourney, type KycProfile } from "./aa";
 
 /**
@@ -42,6 +42,10 @@ export interface IdbiCustomerBinding {
   /** Statement window. The sandbox holds May 2025 data. */
   fromDate: string;
   toDate: string;
+  /** Home branch. Statements are scoped to it — Pune 105, Mumbai 106, Delhi 107. */
+  branchId?: string;
+  /** Shown while the real name is still being fetched, and if the fetch fails. */
+  label: string;
   /** AA party identifiers. Present means the consent journey can run for them. */
   mobile?: string;
   vua?: string;
@@ -54,6 +58,15 @@ export interface IdbiCustomerBinding {
   advisory: Pick<Customer, "age" | "monthlyIncome" | "riskProfile" | "goals"> & { persona?: string };
 }
 
+/**
+ * The customers that actually exist in the IDBI sandbox, found by probing the
+ * account-enquiry API rather than assumed.
+ *
+ * They are deliberately uneven, and that is the point: Priya has a full
+ * picture, Arjun has balances but no transaction history, and Neha is a term
+ * deposit with no statement at all. Real customers arrive in exactly that
+ * condition, and advice that only works for the complete one is not advice.
+ */
 export const IDBI_BINDINGS: IdbiCustomerBinding[] = [
   {
     id: "priya",
@@ -61,6 +74,8 @@ export const IDBI_BINDINGS: IdbiCustomerBinding[] = [
     cifId: "98655854",
     fromDate: "2025-05-01T00:00:00.000",
     toDate: "2025-05-31T00:00:00.000",
+    branchId: "105",
+    label: "Priya Patil",
     mobile: "9988776655",
     vua: "9988776655@onemoney",
     advisory: {
@@ -71,6 +86,43 @@ export const IDBI_BINDINGS: IdbiCustomerBinding[] = [
       goals: [
         { id: "retirement", label: "Retirement", targetAmount: 20000000, targetYear: 2053, current: 450000 },
         { id: "home", label: "Home down payment", targetAmount: 3000000, targetYear: 2030, current: 600000 },
+      ],
+    },
+  },
+  {
+    id: "arjun",
+    acctId: "660100100004",
+    cifId: "77712345",
+    branchId: "106",
+    label: "Arjun Mehta",
+    fromDate: "2025-05-01T00:00:00.000",
+    toDate: "2025-05-31T00:00:00.000",
+    advisory: {
+      age: 41,
+      monthlyIncome: 260000,
+      riskProfile: "aggressive",
+      persona: "Business owner, Mumbai",
+      goals: [
+        { id: "retirement", label: "Retirement", targetAmount: 50000000, targetYear: 2045, current: 1200000 },
+        { id: "education", label: "Children's education", targetAmount: 8000000, targetYear: 2034, current: 900000 },
+      ],
+    },
+  },
+  {
+    id: "neha",
+    acctId: "660100100008",
+    cifId: "88823456",
+    branchId: "107",
+    label: "Neha Singh",
+    fromDate: "2025-05-01T00:00:00.000",
+    toDate: "2025-05-31T00:00:00.000",
+    advisory: {
+      age: 58,
+      monthlyIncome: 95000,
+      riskProfile: "conservative",
+      persona: "Senior professional, Delhi",
+      goals: [
+        { id: "retirement", label: "Retirement income", targetAmount: 15000000, targetYear: 2031, current: 500000 },
       ],
     },
   },
@@ -90,10 +142,31 @@ export class IdbiSource implements FinancialDataSource {
     private fallback: FinancialDataSource = new MockSource(),
   ) {}
 
+  /**
+   * The roster, named by the bank.
+   *
+   * The bank has no "list my customers" call, so the ids come from the
+   * bindings — but the *names* are fetched, because the switcher previously
+   * showed bundled names ("Priya Sharma") beside a live profile for someone
+   * else ("Priya Patil"), which reads as a bug in front of anyone paying
+   * attention. Falls back to the binding label if the lookup fails.
+   */
   async listCustomers(): Promise<CustomerSummary[]> {
-    // The roster still comes from the mock source: the bank APIs have no
-    // "list my demo customers" call, and only bound ids resolve to live data.
-    return this.fallback.listCustomers();
+    return Promise.all(
+      this.bindings.map(async (b) => {
+        let name = b.label;
+        try {
+          const enquiry = await idbi.getAccountEnquiry(b.acctId);
+          const p = enquiry.personName;
+          const joined = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ").trim();
+          if (joined) name = titleCase(joined);
+        } catch {
+          // Keep the label; a roster that fails to render is worse than one
+          // with a slightly stale name.
+        }
+        return { id: b.id, name, persona: b.advisory.persona ?? "IDBI customer" };
+      }),
+    );
   }
 
   async getCustomer(id: string): Promise<Customer | undefined> {
@@ -108,10 +181,27 @@ export class IdbiSource implements FinancialDataSource {
       // resolves. Falls back to the bound account if discovery fails.
       const acctId = await this.resolveAccount(binding);
 
-      const [enquiry, stmt] = await Promise.all([
+      /*
+       * The enquiry is required; the statement is not.
+       *
+       * A term deposit has no statement to give — the API answers
+       * 400 "Data not found" — and treating that as a failed customer meant
+       * a real IDBI account holder vanished and fell through to a synthetic
+       * persona that did not exist, so the screen said "Unknown customer".
+       * Identity and balances come from the enquiry; the statement only adds
+       * transaction history.
+       */
+      const [enquiryResult, stmtResult] = await Promise.allSettled([
         idbi.getAccountEnquiry(acctId),
-        idbi.getStatement(acctId, binding.fromDate, binding.toDate),
+        idbi.getStatement(acctId, binding.fromDate, binding.toDate, binding.branchId ?? "105"),
       ]);
+
+      if (enquiryResult.status === "rejected") throw enquiryResult.reason;
+      const enquiry = enquiryResult.value;
+      const stmt =
+        stmtResult.status === "fulfilled"
+          ? stmtResult.value
+          : ({ result: { accountBalances: {}, transactionDetails: [] } } as never);
       const { persona, ...advisory } = binding.advisory;
       const customer = toCustomer(binding.id, enquiry, stmt, {
         ...advisory,

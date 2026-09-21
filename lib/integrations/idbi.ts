@@ -321,14 +321,38 @@ export function toTransaction(t: StatementTxn): Transaction {
 }
 
 /** Savings balance becomes cash; any fixed-deposit balance becomes an FD holding. */
-export function toHoldings(stmt: StatementResult): Holding[] {
-  const b = stmt.result.accountBalances;
+/**
+ * Holdings from the statement, falling back to the account enquiry.
+ *
+ * Not every account has a statement: a term deposit returns none at all, and
+ * some accounts return balances with no transactions. The enquiry always
+ * carries `acctBal`, so a customer with a five-lakh deposit and no statement
+ * is worth five lakh rather than zero — which is what the screen used to say.
+ */
+export function toHoldings(stmt: StatementResult, enquiry?: AccountEnquiry): Holding[] {
+  const b = stmt?.result?.accountBalances;
   const out: Holding[] = [];
-  const cash = amt(b.availableBalance);
+
+  const cash = amt(b?.availableBalance) || balanceOf(enquiry, "AVAIL");
+  const fd = amt(b?.fFDBalance) || balanceOf(enquiry, "FD");
+
+  // A term deposit's whole balance is the deposit, not spendable cash.
+  const isTermDeposit = enquiry?.acctType?.schmType === "TERM_DEPOSIT";
+  if (isTermDeposit) {
+    const total = cash || balanceOf(enquiry, "LEDGER");
+    if (total > 0) out.push({ assetClass: "fd" as AssetClass, name: "IDBI Term Deposit", value: total });
+    return out;
+  }
+
   if (cash > 0) out.push({ assetClass: "cash" as AssetClass, name: "IDBI Savings Account", value: cash });
-  const fd = amt(b.fFDBalance);
   if (fd > 0) out.push({ assetClass: "fd" as AssetClass, name: "IDBI Fixed Deposit", value: fd });
   return out;
+}
+
+/** Pull one balance type out of the enquiry's `acctBal` array. */
+function balanceOf(enquiry: AccountEnquiry | undefined, type: string): number {
+  const row = enquiry?.acctBal?.find((x) => x.balType?.toUpperCase() === type);
+  return amt(row?.balAmt);
 }
 
 /**
@@ -358,8 +382,8 @@ export function toCustomer(
     city,
     monthlyIncome: overrides.monthlyIncome ?? 0,
     riskProfile: overrides.riskProfile ?? "moderate",
-    holdings: overrides.holdings ?? toHoldings(stmt),
-    transactions: overrides.transactions ?? stmt.result.transactionDetails.map(toTransaction),
+    holdings: overrides.holdings ?? toHoldings(stmt, enquiry),
+    transactions: overrides.transactions ?? (stmt?.result?.transactionDetails ?? []).map(toTransaction),
     goals: overrides.goals ?? [],
   };
 }
