@@ -86,10 +86,21 @@ export function SourceLinking({
         />
       </div>
 
+      {/*
+        Stocks, funds, bonds and gold are all missing for the same reason, so
+        they all carry the same note. Printed against each of them it repeated
+        verbatim four times and read like a template that had failed to fill.
+        Say it once, against the first source it applies to.
+      */}
       <ul className="space-y-1.5">
-        {result.sources.slice(0, revealed).map((s, i) => (
-          <SourceRow key={s.kind} source={s} index={i} />
-        ))}
+        {(() => {
+          const said = new Set<string>();
+          return result.sources.slice(0, revealed).map((s, i) => {
+            const firstTime = !!s.note && !said.has(s.note);
+            if (s.note) said.add(s.note);
+            return <SourceRow key={s.kind} source={s} index={i} showNote={firstTime} />;
+          });
+        })()}
       </ul>
 
       {result.missing.length > 0 && onAdd && (
@@ -105,7 +116,15 @@ export function SourceLinking({
   );
 }
 
-function SourceRow({ source, index }: { source: SourceStatus; index: number }) {
+function SourceRow({
+  source,
+  index,
+  showNote,
+}: {
+  source: SourceStatus;
+  index: number;
+  showNote: boolean;
+}) {
   const linked = source.status === "linked";
   return (
     <motion.li
@@ -136,10 +155,19 @@ function SourceRow({ source, index }: { source: SourceStatus; index: number }) {
         </div>
         {linked ? (
           <p className="text-[10px] text-ink/45">
-            {source.itemCount} {source.kind === "spending" ? "transactions" : "holdings"}
+            {source.itemCount}{" "}
+            {source.kind === "spending"
+              ? source.itemCount === 1
+                ? "transaction"
+                : "transactions"
+              : source.itemCount === 1
+                ? "holding"
+                : "holdings"}
           </p>
         ) : (
-          source.note && <p className="text-[10px] leading-relaxed text-ink/45">{source.note}</p>
+          showNote && source.note && (
+            <p className="text-[10px] leading-relaxed text-ink/45">{source.note}</p>
+          )
         )}
       </div>
     </motion.li>

@@ -45,7 +45,7 @@ export function Dashboard({
   const surplus = monthlySurplus(live);
 
   return (
-    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4 pb-24">
       {/* Net worth header */}
       <div className="rounded-2xl bg-brand-deep p-4 text-white shadow-soft">
         <p className="text-xs text-white/70">Total net worth {bankLinked && <span className="text-brand-accent">· bank linked</span>}</p>
@@ -56,7 +56,7 @@ export function Dashboard({
           month. Name it for what it is and colour it accordingly.
         */}
         <p className="mt-1 text-xs text-white/70">
-          {surplus >= 0 ? "Est. monthly surplus " : "Est. monthly shortfall "}
+          {surplus >= 0 ? "Est. monthly surplus " : "Spending exceeds income by "}
           <span className={`font-semibold ${surplus >= 0 ? "text-brand-accent" : "text-amber-300"}`}>
             {inrCompact(Math.abs(surplus))}
           </span>

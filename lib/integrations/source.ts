@@ -171,7 +171,10 @@ export class IdbiSource implements FinancialDataSource {
 
   async getCustomer(id: string): Promise<Customer | undefined> {
     const binding = this.bindings.find((b) => b.id === id);
-    if (!binding) return this.fallback.getCustomer(id);
+    if (!binding) {
+      const unbound = await this.fallback.getCustomer(id);
+      return unbound ? { ...unbound, dataSource: "fallback" } : undefined;
+    }
 
     try {
       // Discover the customer's accounts from their CIF (API 394) rather than
@@ -227,9 +230,17 @@ export class IdbiSource implements FinancialDataSource {
       // were assumptions until this call existed; now they are the bank's own
       // record. Best-effort — core banking data stands on its own if it fails.
       const kyc = await this.kyc(binding);
-      return kyc ? applyKyc(customer, kyc) : customer;
+      const resolved = kyc ? applyKyc(customer, kyc) : customer;
+      return { ...resolved, dataSource: "live" };
     } catch {
-      return this.fallback.getCustomer(id);
+      /*
+       * Degrade to the bundled persona rather than blanking the screen — but
+       * say so. Whoever renders this needs to be able to tell the difference,
+       * because crediting the bank with a fixture's numbers is worse than
+       * showing no numbers at all.
+       */
+      const fallback = await this.fallback.getCustomer(id);
+      return fallback ? { ...fallback, dataSource: "fallback" } : undefined;
     }
   }
 

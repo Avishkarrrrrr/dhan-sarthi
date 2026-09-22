@@ -86,6 +86,14 @@ const CUSTOMER_SUPPLIED: SourceKind[] = ["equity", "mf", "bonds", "gold"];
 export function aggregate(customer: Customer, live: boolean, now = new Date()): AggregationResult {
   const at = now.toISOString();
 
+  /*
+   * A live *source* is not the same as live *data*. The IDBI source falls back
+   * to a bundled persona when the gateway is unreachable — an IP allow-list
+   * change is enough to do it — and the screen must not go on crediting the
+   * bank for numbers a fixture produced.
+   */
+  const fromBank = live && customer.dataSource !== "fallback";
+
   const sources: SourceStatus[] = KINDS.map((kind) => {
     const itemCount = countFor(kind, customer);
     const customerSupplied = CUSTOMER_SUPPLIED.includes(kind);
@@ -93,7 +101,7 @@ export function aggregate(customer: Customer, live: boolean, now = new Date()): 
     if (itemCount > 0) {
       return {
         kind,
-        provider: customerSupplied ? PROVIDERS[kind] : live ? PROVIDERS[kind] : "Demo data",
+        provider: customerSupplied ? PROVIDERS[kind] : fromBank ? PROVIDERS[kind] : "Demo data",
         status: "linked",
         itemCount,
         lastSyncedAt: at,

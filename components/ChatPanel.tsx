@@ -162,7 +162,7 @@ export function ChatPanel({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="phone-scroll flex flex-1 flex-col space-y-3 overflow-y-auto px-4 py-3">
+      <div ref={scrollRef} className="phone-scroll flex flex-1 flex-col space-y-3 overflow-y-auto px-4 pb-24 pt-3">
         {/*
           Before the first message this tab was a greeting, four chips and 250px
           of white. The empty state now says what the advisor is standing on —

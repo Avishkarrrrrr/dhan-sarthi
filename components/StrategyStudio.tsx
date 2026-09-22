@@ -58,7 +58,7 @@ export function StrategyStudio({ onAskAdvisor }: { onAskAdvisor: (p: string) => 
   };
 
   return (
-    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4 pb-24">
       <div>
         <h2 className="text-lg font-bold text-brand-deep">Strategy Studio</h2>
         <p className="text-xs text-ink/55">

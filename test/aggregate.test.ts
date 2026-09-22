@@ -157,3 +157,28 @@ describe("typed positions", () => {
     expect(r.positions.bonds[0].name).toBe("Public Provident Fund");
   });
 });
+
+/*
+ * A live *source* is not the same as live *data*. The IDBI source falls back
+ * to a bundled persona when the gateway is unreachable — an IP allow-list
+ * change is enough to do it — and the screen must not go on crediting the bank
+ * for numbers a fixture produced.
+ */
+describe("provenance survives a fallback", () => {
+  it("credits IDBI only when the data actually came from IDBI", () => {
+    const live = { ...bankOnly, dataSource: "live" as const };
+    const fell = { ...bankOnly, dataSource: "fallback" as const };
+
+    expect(aggregate(live, true).sources[0].provider).toContain("IDBI");
+    expect(aggregate(fell, true).sources[0].provider).toBe("Demo data");
+  });
+
+  it("still credits the customer for what the customer supplied", () => {
+    const fell = {
+      ...bankOnly,
+      dataSource: "fallback" as const,
+      holdings: [...bankOnly.holdings, { assetClass: "gold" as const, name: "SGB", value: 50_000 }],
+    };
+    expect(aggregate(fell, true).sources.find((s) => s.kind === "gold")!.provider).toBe("Added by you");
+  });
+});

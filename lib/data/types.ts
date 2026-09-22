@@ -47,6 +47,16 @@ export interface Goal {
 }
 
 export interface Customer {
+  /**
+   * Where this record actually came from.
+   *
+   * The live source falls back to a bundled persona when the bank's gateway
+   * is unreachable — which is right, because a demo should degrade rather than
+   * blank — but the screen was still crediting the data to "IDBI 394 · 365".
+   * Claiming the bank supplied something a fixture supplied is the one kind of
+   * bug this product cannot afford.
+   */
+  dataSource?: "live" | "fallback";
   id: string;
   name: string;
   age: number;

@@ -115,7 +115,7 @@ export function TrustPanel({ customerId, riskProfile }: { customerId: string; ri
   };
 
   return (
-    <div className="flex-1 space-y-3 overflow-y-auto p-4 pb-6">
+    <div className="flex-1 space-y-3 overflow-y-auto p-4 pb-24">
       <header>
         <h2 className="text-base font-semibold text-brand-deep">Advice &amp; suitability</h2>
         <p className="mt-0.5 text-xs text-ink/60">

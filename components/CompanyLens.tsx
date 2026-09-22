@@ -75,7 +75,7 @@ export function CompanyLens({
   const sourceLabel = SOURCE_LABELS[source] ?? source;
 
   return (
-    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4 pb-24">
       <div>
         <h2 className="text-lg font-bold text-brand-deep">Company Lens</h2>
         <p className="text-xs text-ink/55">AI insights from a company&apos;s latest concall & results.</p>

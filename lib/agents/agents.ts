@@ -54,7 +54,33 @@ export const treasury: Agent = ({ snapshot }) => {
   // Net of any lien: the treasury desk's whole job is knowing what is actually
   // available, and locked money is visible to the customer but not to them.
   const liquid = Math.max(0, liquidWeight * snapshot.netWorth - (snapshot.lienMarked ?? 0));
-  const months = monthly > 0 ? liquid / monthly : 99;
+
+  /*
+   * No statement, no outgoings, no opinion.
+   *
+   * Two of the three sandbox customers have no usable transaction history, and
+   * dividing by their ₹0 of outgoings used to fall back to a 99-month
+   * sentinel — which this desk then reported as a finding ("cover is 99.0
+   * months — room to take risk") and tilted the book towards equity on.
+   *
+   * That is missing evidence laundered into a bullish signal, which is the one
+   * thing a desk must never do. Say the evidence is absent and stand aside;
+   * the strategist weights views by confidence, so a zero tilt at low
+   * confidence leaves the decision to the desks that can actually see.
+   */
+  if (monthly <= 0) {
+    return {
+      agentId: "treasury",
+      tilt: {},
+      confidence: 0.2,
+      headline: "No spending data — liquidity cover cannot be assessed",
+      reasoning:
+        "This account carries no transaction history, so monthly outgoings are unknown and the months of cover held against them cannot be calculated. An unmeasured buffer is not the same as a healthy one, so this desk takes no position either way. Importing a statement, or a portfolio with regular outflows, would let it form one.",
+      sources: ["No transactions on this account", "Liquidity cover not assessable"],
+    };
+  }
+
+  const months = liquid / monthly;
 
   // Short of a buffer: pull towards cash. Comfortably over: release some.
   const gap = (6 - months) / 6;
@@ -186,6 +212,25 @@ export const gold: Agent = ({ snapshot, market }) => {
  */
 export const behaviour: Agent = ({ snapshot }) => {
   const spends = spendingInsights(snapshot.customer);
+
+  /*
+   * Same trap as treasury, running the other way: with no transactions there
+   * are no outgoings, so the surplus looks like the whole salary and this desk
+   * congratulated the customer on "saving 100% of income — plan can be
+   * ambitious". Nobody saves every rupee; the statement is simply missing.
+   */
+  if (spends.length === 0) {
+    return {
+      agentId: "behaviour",
+      tilt: {},
+      confidence: 0.2,
+      headline: "No spending data — savings behaviour is unknown",
+      reasoning:
+        "Nothing is known about where this customer's money goes, because the account carries no categorised transactions. A surplus inferred from an empty statement would flatter them rather than describe them, so this desk takes no position on how ambitious the plan can be.",
+      sources: ["No transactions on this account", "Savings rate not assessable"],
+    };
+  }
+
   const total = spends.reduce((s, x) => s + x.total, 0);
   const topShare = total > 0 ? (spends[0]?.total ?? 0) / total : 0;
   const savingsRate =

@@ -210,7 +210,7 @@ export function VoiceInterview({
       </div>
 
       {/* The conversation. */}
-      <div ref={scroller} className="phone-scroll flex-1 space-y-2.5 overflow-y-auto p-4">
+      <div ref={scroller} className="phone-scroll flex-1 space-y-2.5 overflow-y-auto p-4 pb-24">
         <AnimatePresence initial={false}>
           {lines.map((l, i) => (
             <motion.div

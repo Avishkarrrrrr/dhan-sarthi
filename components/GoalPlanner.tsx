@@ -58,7 +58,7 @@ export function GoalPlanner({
   const v = sim?.verdict;
 
   return (
-    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="phone-scroll flex-1 space-y-4 overflow-y-auto p-4 pb-24">
       <div>
         <h2 className="text-lg font-bold text-brand-deep">Goal Planner</h2>
         <p className="text-xs text-ink/55">See if you&apos;re on track — adjust and watch it update.</p>
@@ -91,7 +91,12 @@ export function GoalPlanner({
             >
               {v.onTrack
                 ? `On track! You're projected to exceed your ${inrCompact(goal.targetAmount)} target. 🎯`
-                : `Shortfall of ${inrCompact(v.shortfall)}. Raise your SIP or returns to close the gap.`}
+                : /*
+                     "Shortfall" also names the monthly cash-flow gap on the
+                     Portfolio tab, and the two numbers sat one tab apart
+                     meaning entirely different things. Say which gap this is.
+                   */
+                  `${inrCompact(v.shortfall)} short of your ${goal.targetYear} target. Raise your SIP or returns to close the gap.`}
             </div>
           )}
         </section>

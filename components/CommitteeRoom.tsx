@@ -9,6 +9,7 @@ import type { AssetClass } from "@/lib/data/types";
 import type {
   AgentId,
   Allocation,
+  CommitteeEvent,
   ComplianceVerdict,
   EscalationTicket,
   FinalAnswer,
@@ -26,6 +27,26 @@ import { ASSET_LABELS } from "@/lib/format";
  * already looking. The order is the argument: specialists, then a strategist
  * reconciling them, then compliance — which can overrule everything above it.
  */
+
+/**
+ * How long the room holds on each kind of event before moving on.
+ *
+ * These are reading times, not simulated work: a debate exchange quotes another
+ * desk by name and moves a number, which takes longer to take in than a desk
+ * simply lighting up. Total runtime is about eleven seconds; scale the whole
+ * room by scaling these.
+ */
+const BEAT: Record<CommitteeEvent["type"], number> = {
+  agent_start: 120,
+  agent_view: 550,
+  debate: 1400,
+  strategist: 800,
+  compliance: 900,
+  hitl: 600,
+  final: 0,
+};
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const DESKS: { id: AgentId; label: string; role: string; icon: string }[] = [
   { id: "treasury", label: "Treasury", role: "Liquidity", icon: "🏦" },
@@ -102,6 +123,24 @@ export function CommitteeRoom({
   const [open, setOpen] = useState<AgentId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
+  const [skippable, setSkippable] = useState(false);
+
+  /*
+   * The deliberation has a time axis, and it is presentational only.
+   *
+   * The committee is deterministic and the whole NDJSON stream lands in a few
+   * milliseconds, so without this every desk reported, argued, reconciled and
+   * signed off inside one frame — the argument happened, but nobody could see
+   * it happen. Events are queued here and applied one at a time with a beat
+   * sized to what just arrived.
+   *
+   * Deliberately on the client: the generator and the route stay untouched, so
+   * the decision remains reproducible, /api/committee stays fast, and if this
+   * pacing ever misbehaves it cannot change what the committee decided.
+   */
+  const queued = useRef<CommitteeEvent[]>([]);
+  const draining = useRef(false);
+  const skipping = useRef(false);
 
   const running = phase !== "idle" && phase !== "done";
 
@@ -120,11 +159,13 @@ export function CommitteeRoom({
     setOpen(null);
     setError(null);
 
-    try {
-      await streamCommittee(
-        customerId,
-        (e) => {
-          switch (e.type) {
+    queued.current = [];
+    draining.current = false;
+    skipping.current = false;
+    setSkippable(true);
+
+    const apply = (e: CommitteeEvent) => {
+      switch (e.type) {
             case "agent_start":
               setSeats((s) => ({ ...s, [e.agentId]: { ...s[e.agentId], status: "thinking" } }));
               break;
@@ -161,13 +202,51 @@ export function CommitteeRoom({
               setPhase("done");
               break;
           }
+    };
+
+    /*
+     * One drainer at a time, and it outlives the stream: the last few events
+     * are still waiting their turn long after the response has closed. It stops
+     * on abort, so switching customer mid-session cannot leave a second loop
+     * writing into a room that has already been reset.
+     */
+    const drain = async () => {
+      if (draining.current) return;
+      draining.current = true;
+      try {
+        while (queued.current.length > 0) {
+          if (controller.signal.aborted) return;
+          const e = queued.current.shift()!;
+          apply(e);
+          const beat = skipping.current ? 0 : BEAT[e.type];
+          if (beat > 0) await sleep(beat);
+        }
+      } finally {
+        draining.current = false;
+      }
+    };
+
+    try {
+      await streamCommittee(
+        customerId,
+        (e) => {
+          queued.current.push(e);
+          void drain();
         },
         controller.signal,
         riskProfile,
         ips,
       );
+
+      // The stream is done; the room is not. Let the queue finish emptying.
+      while ((queued.current.length > 0 || draining.current) && !controller.signal.aborted) {
+        await sleep(80);
+        void drain();
+      }
+      setSkippable(false);
     } catch (err) {
       if (!controller.signal.aborted) {
+        setSkippable(false);
         setError(err instanceof Error ? err.message : String(err));
         setPhase("idle");
       }
@@ -198,13 +277,30 @@ export function CommitteeRoom({
               {phase === "done" && "Decision recorded"}
             </h3>
           </div>
-          <button
-            onClick={convene}
-            disabled={running}
-            className="rounded-full bg-brand-accent px-3.5 py-1.5 text-xs font-semibold text-brand-abyss shadow-glow transition-transform hover:scale-[1.03] disabled:opacity-50 disabled:hover:scale-100"
-          >
-            {running ? "In session…" : phase === "done" ? "Run again" : "Convene"}
-          </button>
+          <div className="flex items-center gap-2">
+            {/*
+              A six-minute demo sometimes needs to jump, and a judge clicking
+              around should never be held hostage by an animation. Skip empties
+              the queue at once; it changes the pace, never the decision.
+            */}
+            {running && skippable && (
+              <button
+                onClick={() => {
+                  skipping.current = true;
+                }}
+                className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                Skip
+              </button>
+            )}
+            <button
+              onClick={convene}
+              disabled={running}
+              className="rounded-full bg-brand-accent px-3.5 py-1.5 text-xs font-semibold text-brand-abyss shadow-glow transition-transform hover:scale-[1.03] disabled:opacity-50 disabled:hover:scale-100"
+            >
+              {running ? "In session…" : phase === "done" ? "Run again" : "Convene"}
+            </button>
+          </div>
         </div>
 
         <PhaseRail phase={phase} />

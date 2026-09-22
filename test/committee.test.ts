@@ -226,3 +226,55 @@ describe("risk profile from onboarding", () => {
     expect(sumOf(b.weights, GROWTH_CLASSES)).toBeGreaterThan(sumOf(a.weights, GROWTH_CLASSES));
   });
 });
+
+/*
+ * Two of the three sandbox customers have no usable statement — Arjun has no
+ * transactions and Neha has none at all. With outgoings of ₹0, treasury's
+ * liquidity cover divided by zero and fell back to a 99-month sentinel, which
+ * it then reported as a *finding*: "cover is 99.0 months — room to take risk",
+ * while tilting the book towards equity. Behaviour did the same in reverse,
+ * reading zero outgoings as a 100% savings rate.
+ *
+ * Absent data must never become a bullish signal. A desk that cannot see the
+ * evidence says so and stands aside — the same rule the deposit-flight radar
+ * already follows when it refuses to report "no risk found".
+ */
+describe("desks abstain rather than infer from missing data", () => {
+  const withoutStatement = () => {
+    const s = clone(snapshot);
+    s.customer.transactions = [];
+    return s;
+  };
+
+  it("treasury does not report a liquidity cover it cannot measure", () => {
+    const v = treasury({ snapshot: withoutStatement(), market: calm });
+
+    expect(v.headline).not.toMatch(/99/);
+    expect(v.headline).not.toMatch(/room to take risk/i);
+    expect(v.reasoning).not.toMatch(/₹0 a month/);
+    // Says plainly that the evidence is missing.
+    expect(`${v.headline} ${v.reasoning}`).toMatch(/no (spending|transaction)/i);
+  });
+
+  it("treasury stands aside instead of tilting on absent data", () => {
+    const v = treasury({ snapshot: withoutStatement(), market: calm });
+    for (const t of Object.values(v.tilt)) expect(t).toBe(0);
+    expect(v.confidence).toBeLessThanOrEqual(0.3);
+  });
+
+  it("behaviour does not read an empty statement as saving every rupee", () => {
+    const s = withoutStatement();
+    const v = COMMITTEE.find((c) => c.id === "behaviour")!.agent({ snapshot: s, market: calm });
+
+    expect(v.headline).not.toMatch(/100%/);
+    expect(v.headline).not.toMatch(/ambitious/i);
+    expect(`${v.headline} ${v.reasoning}`).toMatch(/no (spending|transaction)/i);
+    for (const t of Object.values(v.tilt)) expect(t).toBe(0);
+  });
+
+  it("still measures cover normally when the statement is there", () => {
+    const v = treasury({ snapshot, market: calm });
+    expect(v.headline).toMatch(/Liquidity cover is \d/);
+    expect(v.confidence).toBeGreaterThan(0.5);
+  });
+});
