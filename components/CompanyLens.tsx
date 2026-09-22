@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { BarChart3, Gavel, Telescope, TriangleAlert, type LucideIcon } from "lucide-react";
 import { listCompanies } from "@/lib/research/companies";
 import { postResearch } from "@/lib/client/api";
 import { lookThrough } from "@/lib/finance/xray";
@@ -51,11 +52,11 @@ export function CompanyLens({
     }
   };
 
-  const SECTIONS: { key: keyof CompanyAnalysis; label: string; icon: string; tone: string }[] = [
-    { key: "quarter", label: "Quarter results", icon: "📊", tone: "bg-brand-green/10 text-brand-green" },
-    { key: "risks", label: "Key risks & challenges", icon: "⚠️", tone: "bg-amber-100 text-amber-700" },
-    { key: "projections", label: "Future projections", icon: "🔭", tone: "bg-sky-100 text-sky-700" },
-    { key: "verdict", label: "Final verdict", icon: "✅", tone: "bg-brand-deep/10 text-brand-deep" },
+  const SECTIONS: { key: keyof CompanyAnalysis; label: string; Icon: LucideIcon; tone: string }[] = [
+    { key: "quarter", label: "Quarter results", Icon: BarChart3, tone: "bg-brand-green/10 text-brand-green" },
+    { key: "risks", label: "Key risks & challenges", Icon: TriangleAlert, tone: "bg-amber-100 text-amber-700" },
+    { key: "projections", label: "Future projections", Icon: Telescope, tone: "bg-sky-100 text-sky-700" },
+    { key: "verdict", label: "Final verdict", Icon: Gavel, tone: "bg-brand-deep/10 text-brand-deep" },
   ];
 
   /*
@@ -85,7 +86,7 @@ export function CompanyLens({
           value={query}
           onChange={(e) => setQuery(e.target.value.toUpperCase())}
           onKeyDown={(e) => e.key === "Enter" && analyze()}
-          placeholder="NSE symbol or name — e.g. TCS, ITC"
+          placeholder="Search a company or NSE symbol"
           className="flex-1 rounded-xl border border-brand-light bg-surface px-3 py-2.5 text-sm outline-none focus:border-brand-green"
         />
         <button
@@ -124,7 +125,7 @@ export function CompanyLens({
 
       {/* Featured quick-picks */}
       <div>
-        <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-ink/45">Featured</p>
+        <p className="mb-1.5 text-[11px] font-medium text-ink/45">Popular with investors</p>
         <div className="flex flex-wrap gap-2">
           {featured.map((c) => (
             <button
@@ -171,7 +172,9 @@ export function CompanyLens({
           {SECTIONS.map((s) => (
             <section key={s.key} className="rounded-2xl border border-brand-light bg-white p-4 shadow-soft">
               <div className="mb-1.5 flex items-center gap-2">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm ${s.tone}`}>{s.icon}</span>
+                <span className={`flex h-7 w-7 items-center justify-center rounded-full ${s.tone}`}>
+                  <s.Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+                </span>
                 <h3 className="text-sm font-semibold text-brand-deep">{s.label}</h3>
               </div>
               <p className="text-xs leading-relaxed text-ink/70">{analysis[s.key]}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Scale } from "lucide-react";
 import { useState } from "react";
 import { optimizePortfolio, rebalanceOrders, type MptResult, type RebalanceOrder } from "@/lib/finance/mpt";
 import { netWorth as computeNetWorth } from "@/lib/finance/metrics";
@@ -52,7 +53,7 @@ export function PortfolioOptimizer({
   return (
     <section className="rounded-2xl border border-brand-light bg-white p-4 shadow-soft">
       <div className="mb-1 flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-green/10 text-sm">⚖️</span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-green/10 text-brand-green"><Scale className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden /></span>
         <h3 className="text-sm font-semibold text-brand-deep">Optimize with Modern Portfolio Theory</h3>
       </div>
       <p className="mb-3 text-xs text-ink/60">

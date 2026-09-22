@@ -65,6 +65,7 @@ export function GoalPlanner({
       </div>
 
       <select
+        aria-label="Choose a goal"
         value={goalId}
         onChange={(e) => setGoalId(e.target.value)}
         className="w-full rounded-xl border border-brand-light bg-white px-3 py-2.5 text-sm font-medium text-ink"
@@ -90,7 +91,7 @@ export function GoalPlanner({
               }`}
             >
               {v.onTrack
-                ? `On track! You're projected to exceed your ${inrCompact(goal.targetAmount)} target. 🎯`
+                ? `On track! You're projected to exceed your ${inrCompact(goal.targetAmount)} target.`
                 : /*
                      "Shortfall" also names the monthly cash-flow gap on the
                      Portfolio tab, and the two numbers sat one tab apart

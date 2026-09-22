@@ -8,10 +8,44 @@ import { inr, inrCompact } from "@/lib/format";
 
 type BrokerState = "idle" | "connecting" | "connected" | "automating" | "done";
 
-export function StrategyStudio({ onAskAdvisor }: { onAskAdvisor: (p: string) => void }) {
-  const [amount, setAmount] = useState(500000);
-  const [risk, setRisk] = useState<RiskTolerance>("Medium");
-  const [cagr, setCagr] = useState(14);
+/** Snap to the slider's step so the handle lands on a real stop. */
+const toStep = (n: number, step: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, Math.round(n / step) * step));
+
+/** The house view of long-run returns, shared with the goal planner. */
+const DEFAULT_CAGR = 10;
+
+const RISK_FOR_PROFILE: Record<string, RiskTolerance> = {
+  conservative: "Low",
+  moderate: "Medium",
+  aggressive: "High",
+};
+
+export function StrategyStudio({
+  onAskAdvisor,
+  investible = 0,
+  riskProfile,
+}: {
+  onAskAdvisor: (p: string) => void;
+  /** Holdings net of anything under lien — what could actually be deployed. */
+  investible?: number;
+  riskProfile?: string;
+}) {
+  /*
+   * Open on this customer's own numbers.
+   *
+   * The defaults used to be a flat ₹5,00,000 at 14% for everyone — so Priya,
+   * whose entire net worth is ₹65,780, was shown a plan for money she does not
+   * have, at a return the goal planner never claims. Two screens disagreeing
+   * about the same person is worse than either being wrong alone.
+   */
+  const [amount, setAmount] = useState(() =>
+    investible > 0 ? toStep(investible, 50_000, 50_000, 5_000_000) : 500_000,
+  );
+  const [risk, setRisk] = useState<RiskTolerance>(
+    () => RISK_FOR_PROFILE[riskProfile ?? ""] ?? "Medium",
+  );
+  const [cagr, setCagr] = useState(DEFAULT_CAGR);
   const [horizon, setHorizon] = useState(5);
   const [loading, setLoading] = useState(false);
   const [market, setMarket] = useState<MarketSnapshot | null>(null);

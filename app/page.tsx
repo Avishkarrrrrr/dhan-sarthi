@@ -107,6 +107,17 @@ export default function Home() {
   const displayName = customer?.name ?? current?.name ?? "";
   const firstName = displayName.split(" ")[0] || "there";
 
+  /*
+   * What this customer could actually put to work: everything they hold, less
+   * anything the bank has marked under lien. The Strategy tab used to open on
+   * a flat ₹5,00,000 default for a customer whose entire net worth is ₹65,780,
+   * which is the sort of number a reader stops trusting the screen over.
+   */
+  const investible = holdings.reduce(
+    (sum, h) => sum + Math.max(0, h.value - (h.lienAmount ?? 0)),
+    0,
+  );
+
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 p-0 sm:p-4 lg:flex-row lg:items-start lg:gap-12 lg:p-10">
       {/* Pitch rail (hidden on small screens) */}
@@ -204,7 +215,13 @@ export default function Home() {
             )}
             {screen === "trust" && <TrustPanel customerId={customerId} riskProfile={riskProfile} />}
             {screen === "planner" && <GoalPlanner customerId={customerId} onAskAdvisor={askAdvisor} />}
-            {screen === "strategy" && <StrategyStudio onAskAdvisor={askAdvisor} />}
+            {screen === "strategy" && (
+              <StrategyStudio
+                onAskAdvisor={askAdvisor}
+                investible={investible}
+                riskProfile={customer?.riskProfile}
+              />
+            )}
             {screen === "lens" && <CompanyLens customer={customer} onAskAdvisor={askAdvisor} />}
           </>
         )}

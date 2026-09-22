@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
+import { Languages, Scale, ShieldCheck } from "lucide-react";
 import type { RiskProfile } from "@/lib/contracts/types";
 import { postAaJourney, type AaJourneyResponse } from "@/lib/client/api";
 import { AdvisorAvatar } from "./AdvisorAvatar";
@@ -112,13 +113,15 @@ export function Onboarding({
                 language.
               </p>
               <ul className="mt-5 space-y-2.5">
-                {[
-                  ["🔗", "You stay in control", "I only see what you consent to share, and you can withdraw it."],
-                  ["⚖️", "Every suggestion is checked", "Unsuitable advice is blocked before it reaches you."],
-                  ["🗣", "Ask in eight languages", "By voice or text, whenever you want."],
-                ].map(([icon, title, detail]) => (
+                {(
+                  [
+                    [ShieldCheck, "You stay in control", "I only see what you consent to share, and you can withdraw it."],
+                    [Scale, "Every suggestion is checked", "Unsuitable advice is blocked before it reaches you."],
+                    [Languages, "Ask in eight languages", "By voice or text, whenever you want."],
+                  ] as const
+                ).map(([Icon, title, detail]) => (
                   <li key={title} className="flex gap-2.5 rounded-xl bg-white/[0.06] p-3">
-                    <span className="text-base leading-5">{icon}</span>
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-glow" strokeWidth={1.75} aria-hidden />
                     <span>
                       <span className="block text-xs font-semibold text-white">{title}</span>
                       <span className="block text-[11px] leading-snug text-white/60">{detail}</span>

@@ -31,10 +31,10 @@ export function Avatar3D({
   size?: number;
 }) {
   const [blink, setBlink] = useState(false);
-  const [turn, setTurn] = useState({ x: 0, y: 0 });
   const [open, setOpen] = useState(0);
   const raf = useRef(0);
   const smooth = useRef(0);
+  const stage = useRef<HTMLDivElement>(null);
 
   // Irregular blinks — an exactly periodic blink reads as a machine.
   useEffect(() => {
@@ -53,29 +53,64 @@ export function Avatar3D({
     return () => clearTimeout(t);
   }, []);
 
-  // Idle drift. Stillness is what makes a rendered face look dead.
+  /*
+   * Idle motion — the head settles rather than sways.
+   *
+   * This used to be two continuous sines, yawing ±8° against a ±3.4° nod at a
+   * different frequency, forever. A head that rocks side to side and never
+   * comes to rest does not read as alive; it reads as unsteady, and people
+   * said so. Real idle motion is mostly stillness with small corrections.
+   *
+   * So: a much smaller drift, and an ease that spends most of each cycle near
+   * centre instead of sweeping evenly between the extremes. Thinking is the
+   * one state allowed a visible tilt, because there it means something.
+   *
+   * Written straight to the element's transform rather than through state.
+   * The old version called setTurn on every animation frame, re-rendering the
+   * whole face sixty times a second to move it a fraction of a degree.
+   */
   useEffect(() => {
     const start = performance.now();
+    const busy = mood === "thinking";
+
     const tick = (now: number) => {
       const t = (now - start) / 1000;
-      const busy = mood === "thinking";
-      setTurn({
-        y: Math.sin(t * (busy ? 0.85 : 0.4)) * (busy ? 11 : 8),
-        x: Math.sin(t * 0.58) * 3.4 + (busy ? 2.5 : 0),
-      });
+      // Cubing a sine keeps the value near zero for most of the cycle and
+      // moves quickly through the middle — stillness punctuated by a shift.
+      const ease = (v: number) => v * v * v;
+      const y = ease(Math.sin(t * 0.22)) * (busy ? 5 : 3.2);
+      const x = ease(Math.sin(t * 0.17 + 1.1)) * 1.6 + (busy ? 1.8 : 0);
+      if (stage.current) {
+        stage.current.style.transform = `rotateY(${y.toFixed(2)}deg) rotateX(${(-x).toFixed(2)}deg)`;
+      }
       raf.current = requestAnimationFrame(tick);
     };
+
     raf.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf.current);
   }, [mood]);
 
-  // Smooth the amplitude: raw values jitter and look like chattering teeth.
+  /*
+   * Smooth the amplitude: raw values jitter and look like chattering teeth.
+   *
+   * The loop stops once the mouth is shut and nobody is speaking. It used to
+   * run forever, re-rendering the face every frame to hold the mouth at a
+   * value that was already zero — so the component never went idle, on a
+   * screen where the avatar is usually just sitting there.
+   */
   useEffect(() => {
     let live = true;
     const tick = () => {
       if (!live) return;
       const target = speaking ? Math.max(0.12, Math.min(1, amplitude)) : 0;
       smooth.current += (target - smooth.current) * (target > smooth.current ? 0.5 : 0.22);
+
+      if (!speaking && smooth.current < 0.004) {
+        smooth.current = 0;
+        setOpen(0);
+        return; // settled — nothing to animate until speech resumes
+      }
+
       setOpen(smooth.current);
       requestAnimationFrame(tick);
     };
@@ -88,7 +123,6 @@ export function Avatar3D({
   // Mouth geometry, driven by how loud the audio is right now.
   const mouthRy = 1.6 + open * 11;
   const mouthRx = 13 - open * 2.2;
-  const lidY = blink ? 0 : 1;
   const browLift = mood === "thinking" ? -3 : 0;
 
   return (
@@ -112,12 +146,9 @@ export function Avatar3D({
       />
 
       <div
+        ref={stage}
         className="absolute inset-0"
-        style={{
-          transformStyle: "preserve-3d",
-          transform: `rotateY(${turn.y}deg) rotateX(${-turn.x}deg)`,
-          transition: "transform 110ms linear",
-        }}
+        style={{ transformStyle: "preserve-3d", willChange: "transform" }}
       >
         <svg viewBox="0 0 200 210" className="absolute inset-0 h-full w-full">
           <defs>
@@ -215,22 +246,41 @@ export function Avatar3D({
               <g key={cx}>
                 <ellipse cx={cx} cy={96} rx={13} ry={9} fill="#FFFFFF" />
                 <g clipPath={`url(#${clip})`}>
-                  {/* Pupils lag the head turn so the gaze stays on the viewer */}
-                  <circle cx={cx - turn.y * 0.16} cy={96} r={5.4} fill="#14261C" />
-                  <circle cx={cx - turn.y * 0.16 - 1.7} cy={94.2} r={1.7} fill="#FFFFFF" opacity="0.9" />
+                  {/*
+                    The pupils used to slide against the head turn to hold the
+                    gaze on the viewer. At the drift this head now has, that
+                    correction is under half a pixel — invisible, and the only
+                    thing tying the eyes to the animation clock. Letting them
+                    turn with the head is both simpler and more natural.
+                  */}
+                  <circle cx={cx} cy={96} r={5.4} fill="#14261C" />
+                  <circle cx={cx - 1.7} cy={94.2} r={1.7} fill="#FFFFFF" opacity="0.9" />
                 </g>
-                {/* Upper lid — drops to close the eye on a blink */}
+                {/*
+                  Upper lid — drops to close the eye on a blink.
+
+                  At rest this sat at cy 87 with ry 9, so it spanned y 78–96
+                  against an eye white of 87–105: the lid covered the entire
+                  top half of the eye, every frame. Together with the lash line
+                  and the brow just above it, the whole region read as one
+                  heavy band and the face looked half asleep. Resting the lid
+                  at 80 leaves the pupil clear and the eye open.
+                */}
                 <ellipse
                   cx={cx}
-                  cy={96 - 9 + (blink ? 9 : 0)}
+                  cy={blink ? 96 : 80}
                   rx={13.4}
                   ry={9}
                   fill="url(#ds-skin)"
-                  style={{ transition: "cy 90ms ease", opacity: lidY === 0 ? 1 : 1 }}
+                  style={{ transition: "cy 90ms ease" }}
                 />
-                {/* Lash line */}
+                {/* Lash line, sitting on the lid's edge rather than across the eye */}
                 <path
-                  d={`M${cx - 13} 94 Q${cx} ${blink ? 96 : 87} ${cx + 13} 94`}
+                  d={
+                    blink
+                      ? `M${cx - 13} 95 Q${cx} 97 ${cx + 13} 95`
+                      : `M${cx - 12.5} 91 Q${cx} 84 ${cx + 12.5} 91`
+                  }
                   stroke="#2A1D14"
                   strokeWidth="2"
                   fill="none"

@@ -1,5 +1,6 @@
 "use client";
 
+import { Landmark } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { AssetClass, Holding } from "@/lib/data/types";
 import { inr, ASSET_LABELS } from "@/lib/format";
@@ -147,7 +148,7 @@ export function AccountsPanel({
       {!bankLinked ? (
         <>
           <div className="mb-1 flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-green/10 text-sm">🏦</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-green/10 text-brand-green"><Landmark className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden /></span>
             <h3 className="text-sm font-semibold text-brand-deep">Link your bank account</h3>
           </div>
           <p className="mb-3 text-xs text-ink/60">
@@ -160,7 +161,7 @@ export function AccountsPanel({
               onClick={connect}
               className="w-full rounded-xl bg-brand-green py-2.5 text-sm font-semibold text-white"
             >
-              🔗 Give consent &amp; link account
+              Give consent & link account
             </button>
           )}
 
@@ -183,11 +184,11 @@ export function AccountsPanel({
         <>
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-green/10 text-sm">🏦</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-green/10 text-brand-green"><Landmark className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden /></span>
               <h3 className="text-sm font-semibold text-brand-deep">Bank accounts</h3>
             </div>
             <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green">
-              🔗 Consent active
+              Consent active
             </span>
           </div>
 
