@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, Languages } from "lucide-react";
 import { type Mood } from "./Avatar";
 import { AdvisorAvatar } from "./AdvisorAvatar";
 import { useVoice } from "@/lib/client/useVoice";
@@ -140,25 +141,42 @@ export function ChatPanel({
             <span className="rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green">
               {provider === "bedrock"
                 ? "Claude · IDBI Bedrock"
-                : provider === "gemini"
-                  ? "Gemini"
-                  : provider === "sarvam"
-                    ? "Sarvam-M"
-                    : "Guided"}
+                : provider === "sarvam"
+                  ? "Sarvam-M"
+                  : "Offline guidance"}
             </span>
           )}
         </div>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="mt-2 rounded-full border border-brand-light bg-white px-3 py-1 text-xs text-ink/70"
-        >
-          {LANGUAGES.map((l) => (
-            <option key={l.code} value={l.code}>
-              🗣 {l.label}
-            </option>
-          ))}
-        </select>
+        {/*
+          The speaking-head emoji repeated on all six options rendered
+          differently on every platform and said nothing the control did not
+          already say. One icon outside the select, and the native arrow
+          replaced with a drawn one so it matches the rest of the app.
+        */}
+        <div className="relative mt-2">
+          <Languages
+            className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink/40"
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            aria-label="Reply language"
+            className="appearance-none rounded-full border border-brand-light bg-white py-1 pl-7 pr-7 text-xs text-ink/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/40"
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink/40"
+            strokeWidth={2}
+            aria-hidden
+          />
+        </div>
       </div>
 
       {/* Messages */}

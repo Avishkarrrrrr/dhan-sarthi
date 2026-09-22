@@ -21,14 +21,9 @@ describe("provider selection", () => {
   });
 
   it("respects forced fallback even if a key exists", () => {
-    process.env.GEMINI_API_KEY = "x";
+    process.env.SARVAM_API_KEY = "x";
     process.env.LLM_PROVIDER = "fallback";
     expect(selectProvider().name).toBe("fallback");
-  });
-
-  it("selects gemini when key present", () => {
-    process.env.GEMINI_API_KEY = "x";
-    expect(selectProvider().name).toBe("gemini");
   });
 
   it("selects bedrock when forced", () => {
@@ -41,10 +36,22 @@ describe("provider selection", () => {
     expect(selectProvider().name).toBe("bedrock");
   });
 
-  it("prefers bedrock over a gemini key once bedrock is opted into", () => {
-    process.env.GEMINI_API_KEY = "x";
-    process.env.BEDROCK_MODEL_ID = "anthropic.claude-sonnet-5";
+  it("prefers bedrock over a sarvam key once bedrock is opted into", () => {
+    process.env.SARVAM_API_KEY = "x";
+    process.env.BEDROCK_MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
     expect(selectProvider().name).toBe("bedrock");
+  });
+
+  /*
+   * Gemini was removed from the chain outright. It only ever ran when Bedrock
+   * was not configured — the one case nobody is watching — and it meant
+   * posting a customer's balances and goals to Google, a destination never
+   * declared to IDBI. With no Bedrock and no Sarvam the answer is the
+   * deterministic provider, which fails locally and visibly.
+   */
+  it("never reaches a third-party model when bedrock is unconfigured", () => {
+    process.env.GEMINI_API_KEY = "x";
+    expect(selectProvider().name).toBe("fallback");
   });
 
   it("does not select bedrock from AWS_REGION alone", () => {

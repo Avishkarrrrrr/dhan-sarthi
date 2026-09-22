@@ -1,6 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  Activity,
+  CalendarClock,
+  Coins,
+  Landmark,
+  Receipt,
+  TrendingUp,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import type { Exchange } from "@/lib/agents/debate";
 import { ActionCard } from "./ActionCard";
 import { TaxPanel } from "./TaxPanel";
@@ -48,14 +58,75 @@ const BEAT: Record<CommitteeEvent["type"], number> = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const DESKS: { id: AgentId; label: string; role: string; icon: string }[] = [
-  { id: "treasury", label: "Treasury", role: "Liquidity", icon: "🏦" },
-  { id: "markets", label: "Markets", role: "Trend", icon: "📈" },
-  { id: "macro", label: "Volatility", role: "Risk appetite", icon: "🌊" },
-  { id: "bonds", label: "Fixed income", role: "Horizon", icon: "📋" },
-  { id: "gold", label: "Gold", role: "Hedging", icon: "🥇" },
-  { id: "behaviour", label: "Behaviour", role: "Cash flow", icon: "🧭" },
-  { id: "tax", label: "Tax", role: "After-tax return", icon: "🧾" },
+/**
+ * The desks, and what each one is looking at.
+ *
+ * `examines` is what the card says before anyone has spoken. Without it the
+ * room opened as seven empty boxes — the largest thing on the screen, saying
+ * nothing — and the method only became visible once you had already pressed
+ * Convene. Stating the question each desk asks makes the idle state the
+ * explanation it should always have been, and it is real: every line below
+ * names the quantity that desk actually computes.
+ *
+ * Icons are line icons rather than emoji. Emoji render differently on every
+ * platform, carry their own colour, and sit oddly in a bank's product.
+ */
+const DESKS: {
+  id: AgentId;
+  label: string;
+  role: string;
+  examines: string;
+  Icon: LucideIcon;
+}[] = [
+  {
+    id: "treasury",
+    label: "Treasury",
+    role: "Liquidity",
+    examines: "Months of cover against a six-month buffer",
+    Icon: Landmark,
+  },
+  {
+    id: "markets",
+    label: "Markets",
+    role: "Trend",
+    examines: "The Nifty against its four moving averages",
+    Icon: TrendingUp,
+  },
+  {
+    id: "macro",
+    label: "Volatility",
+    role: "Risk appetite",
+    examines: "India VIX, and how much risk it argues for",
+    Icon: Activity,
+  },
+  {
+    id: "bonds",
+    label: "Fixed income",
+    role: "Horizon",
+    examines: "How far the nearest goal is, and duration",
+    Icon: CalendarClock,
+  },
+  {
+    id: "gold",
+    label: "Gold",
+    role: "Hedging",
+    examines: "Gold's weight against a 5% hedge",
+    Icon: Coins,
+  },
+  {
+    id: "behaviour",
+    label: "Behaviour",
+    role: "Cash flow",
+    examines: "What actually reaches investments each month",
+    Icon: Wallet,
+  },
+  {
+    id: "tax",
+    label: "Tax",
+    role: "After-tax return",
+    examines: "80C headroom and the drag on deposit interest",
+    Icon: Receipt,
+  },
 ];
 
 type Seat = {
@@ -264,11 +335,15 @@ export function CommitteeRoom({
           className="pointer-events-none absolute -left-10 -top-16 h-40 w-40 rounded-full bg-brand-accent/20 blur-3xl"
         />
         <div className="relative flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-glow/70">
-              Investment committee
-            </p>
-            <h3 className="text-sm font-semibold text-white">
+          {/*
+            The eyebrow said "INVESTMENT COMMITTEE" above a heading that
+            already said seven desks were involved — a tracked-out capital
+            label repeating the line beneath it. The heading carries it alone,
+            and the button gets its own lane so a two-line title no longer
+            crowds it.
+          */}
+          <div className="min-w-0 flex-1 pr-2">
+            <h3 className="text-sm font-semibold leading-snug text-white">
               {phase === "idle" && "Seven desks, one recommendation"}
               {phase === "deliberating" && `Deliberating · ${spoken} of ${DESKS.length} reported`}
               {phase === "debating" && "The desks are arguing it out"}
@@ -277,7 +352,7 @@ export function CommitteeRoom({
               {phase === "done" && "Decision recorded"}
             </h3>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {/*
               A six-minute demo sometimes needs to jump, and a judge clicking
               around should never be held hostage by an animation. Skip empties
@@ -488,11 +563,16 @@ export function CommitteeRoom({
 
 /** The four stages, so it is obvious what has happened and what is still to come. */
 function PhaseRail({ phase }: { phase: Phase }) {
+  /*
+   * Stage names are verbs where a verb reads better, and all of them are short
+   * enough to sit in a fifth of a phone's width. "Strategist" and "Compliance"
+   * set in tracked-out capitals overran their columns and collided.
+   */
   const STAGES: { key: Phase; label: string }[] = [
     { key: "deliberating", label: "Desks" },
     { key: "debating", label: "Debate" },
-    { key: "reconciling", label: "Strategist" },
-    { key: "vetting", label: "Compliance" },
+    { key: "reconciling", label: "Reconcile" },
+    { key: "vetting", label: "Checks" },
     { key: "done", label: "Answer" },
   ];
   const order: Phase[] = ["idle", "deliberating", "debating", "reconciling", "vetting", "done"];
@@ -515,7 +595,7 @@ function PhaseRail({ phase }: { phase: Phase }) {
               />
             </div>
             <span
-              className={`text-[9px] uppercase tracking-wide ${
+              className={`truncate text-[9px] ${
                 reached ? "text-brand-glow/80" : "text-white/25"
               }`}
             >
@@ -560,24 +640,42 @@ function DeskCard({
       } ${expanded ? "col-span-2" : ""}`}
     >
       <div className="flex items-center gap-1.5">
-        <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px]">
-          {desk.icon}
+        <span
+          className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${
+            spoken ? "bg-brand-glow/15 text-brand-glow" : "bg-white/10 text-white/50"
+          }`}
+        >
+          <desk.Icon className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
           {thinking && (
             <span className="absolute inset-0 animate-pulse-ring rounded-full border border-brand-glow" />
           )}
         </span>
-        <span className="flex-1">
-          <span className="block text-[11px] font-semibold leading-tight text-white">{desk.label}</span>
-          <span className="block text-[9px] uppercase tracking-wide text-white/35">{desk.role}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[11px] font-semibold leading-tight text-white">
+            {desk.label}
+          </span>
+          <span className="block truncate text-[9px] text-white/35">{desk.role}</span>
         </span>
         {spoken && seat.confidence !== undefined && <ConfidenceDial value={seat.confidence} />}
       </div>
 
-      <p className="mt-1.5 min-h-[26px] text-[10px] leading-snug text-white/70">
+      {/*
+        Before anyone speaks the card says what this desk will look at, in
+        lighter type. Seven empty boxes were the largest thing on the screen
+        and the least informative; the question each desk asks is worth reading
+        on its own, and it makes the answer that replaces it legible.
+      */}
+      <p
+        className={`mt-1.5 min-h-[30px] text-[10px] leading-snug ${
+          spoken ? "text-white/70" : "text-white/40"
+        }`}
+      >
         {thinking ? (
           <span className="inline-block h-2.5 w-3/4 animate-shimmer rounded bg-[linear-gradient(90deg,rgba(255,255,255,0.06),rgba(255,255,255,0.18),rgba(255,255,255,0.06))] bg-[length:200%_100%]" />
-        ) : (
+        ) : spoken ? (
           seat.headline
+        ) : (
+          desk.examines
         )}
       </p>
 

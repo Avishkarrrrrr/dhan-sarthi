@@ -8,7 +8,7 @@ export interface CompleteOpts {
 }
 
 export interface LlmProvider {
-  name: "bedrock" | "gemini" | "sarvam" | "fallback";
+  name: "bedrock" | "sarvam" | "fallback";
   complete(messages: ChatMsg[], system: string, opts?: CompleteOpts): Promise<string>;
   /**
    * Token-by-token output, where the provider supports it.

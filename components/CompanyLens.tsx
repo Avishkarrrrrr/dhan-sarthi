@@ -60,13 +60,11 @@ export function CompanyLens({
 
   /*
    * Name the engine that actually answered. This used to print the raw
-   * provider key for anything but Gemini, so the deployed build — which runs
-   * Claude on Bedrock under IDBI's own AWS account — badged its analysis
-   * "bedrock" in lowercase.
+   * provider key, so the deployed build — which runs Claude on Bedrock under
+   * IDBI's own AWS account — badged its analysis "bedrock" in lowercase.
    */
   const SOURCE_LABELS: Record<string, string> = {
     cached: "Bundled analysis",
-    gemini: "Google Gemini",
     bedrock: "Claude on AWS Bedrock",
     sarvam: "Sarvam AI",
     unavailable: "AI engine unavailable",

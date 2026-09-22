@@ -10,6 +10,7 @@ import { StrategyStudio } from "@/components/StrategyStudio";
 import { CompanyLens } from "@/components/CompanyLens";
 import { TrustPanel } from "@/components/TrustPanel";
 import { Onboarding } from "@/components/Onboarding";
+import { CustomerSwitcher } from "@/components/CustomerSwitcher";
 import { fetchCustomers, fetchProfile } from "@/lib/client/api";
 import type { Customer, CustomerSummary, Holding } from "@/lib/data/types";
 import type { RiskProfile } from "@/lib/contracts/types";
@@ -166,18 +167,7 @@ export default function Home() {
             <p className="text-[11px] text-white/60">Good day,</p>
             <p className="text-base font-semibold leading-tight">{firstName}</p>
           </div>
-          <select
-            value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-            className="rounded-full bg-white/15 px-3 py-1.5 text-xs text-white outline-none"
-            aria-label="Switch demo customer"
-          >
-            {customers.map((c) => (
-              <option key={c.id} value={c.id} className="text-ink">
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <CustomerSwitcher customers={customers} value={customerId} onChange={setCustomerId} />
         </header>
         )}
 
