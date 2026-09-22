@@ -76,7 +76,7 @@ function numbers(window: string): number[] {
  * are large, and that relationship holds across every layout. Where it does
  * not, the review screen is where the user fixes it.
  */
-function readHolding(isin: string, window: string): ParsedHolding | undefined {
+function readHolding(isin: string, window: string, before = ""): ParsedHolding | undefined {
   const kind = isin[2] === "F" ? "mf" : isin[2] === "D" ? "bond" : "equity";
 
   /*
@@ -86,9 +86,12 @@ function readHolding(isin: string, window: string): ParsedHolding | undefined {
    * end. Without that, the holding is called "INFOSYS LIMITED 40 1038.50
    * 41540.00", which is what the first run of this actually produced.
    */
-  const name = (window.match(/^[\s|]*([A-Za-z][A-Za-z0-9&.'()\- ]{3,60})/)?.[1] ?? "")
+  const after = (window.match(/^[\s|]*([A-Za-z][A-Za-z0-9&.'()\- ]{3,60})/)?.[1] ?? "")
     .replace(/(\s+[\d.,]+)+\s*$/, "")
     .trim();
+
+  // …except on a registrar's statement, where it runs the other way. See below.
+  const name = after || nameBefore(before);
   const nums = numbers(window).filter((n) => n > 0);
   if (!nums.length) return undefined;
 
@@ -110,6 +113,32 @@ function readHolding(isin: string, window: string): ParsedHolding | undefined {
   };
 }
 
+/**
+ * The scheme name where the registrar prints it *before* the ISIN.
+ *
+ * NSDL and CDSL name the instrument after its ISIN; CAMS and KFintech name the
+ * scheme first and then run the units, the NAV, the transaction date and their
+ * own name before it. Reading only forward, a real CAMS statement imported a
+ * fund called "INF22M001093" — the identifier standing where the customer
+ * expects to read the fund's name.
+ *
+ * So peel those columns off the end, right to left, and take what is left.
+ */
+function nameBefore(before: string): string {
+  const trimmed = before
+    // the registrar's own name sits immediately before the ISIN
+    .replace(/\s+(CAMS|KFINTECH|KFIN|KARVY)\s*$/i, "")
+    // then the NAV, the date, and the unit count
+    .replace(/(\s+[\d.,]+)+\s*$/, "")
+    .replace(/\s+\d{1,2}[-/][A-Za-z]{3}[-/]\d{2,4}\s*$/, "")
+    .replace(/(\s+[\d.,]+)+\s*$/, "");
+
+  const m = trimmed.match(/([A-Za-z][A-Za-z0-9&.'()\-/ ]{6,80})\s*$/);
+  return (m?.[1] ?? "")
+    .replace(/(\s+[\d.,]+)+\s*$/, "")
+    .trim();
+}
+
 /** Parse the extracted text of a statement. Exported so it can be tested. */
 export function parseCasText(text: string): ImportResult {
   const method = detectMethod(text);
@@ -123,17 +152,21 @@ export function parseCasText(text: string): ImportResult {
    * ended up with a quantity of 1 read out of the next line's ISIN.
    */
   ISIN.lastIndex = 0;
-  const found: { isin: string; from: number }[] = [];
+  const found: { isin: string; at: number; from: number }[] = [];
   let match: RegExpExecArray | null;
   while ((match = ISIN.exec(text)) !== null) {
-    found.push({ isin: match[1], from: match.index + match[1].length });
+    found.push({ isin: match[1], at: match.index, from: match.index + match[1].length });
   }
 
   found.forEach((hit, i) => {
     if (seen.has(hit.isin)) return;
     seen.add(hit.isin);
     const end = i + 1 < found.length ? found[i + 1].from - found[i + 1].isin.length : text.length;
-    const holding = readHolding(hit.isin, text.slice(hit.from, Math.min(end, hit.from + 200)));
+    // The text before this ISIN, bounded by the previous one so a holding can
+    // never take its neighbour's name.
+    const floor = i > 0 ? found[i - 1].from : 0;
+    const before = text.slice(Math.max(floor, hit.at - 220), hit.at);
+    const holding = readHolding(hit.isin, text.slice(hit.from, Math.min(end, hit.from + 200)), before);
     if (holding) holdings.push(holding);
   });
 
@@ -146,7 +179,10 @@ export function parseCasText(text: string): ImportResult {
   const missing = holdings.filter((h) => h.needsCostBasis).length;
   if (missing) {
     warnings.push(
-      `${missing} holding${missing === 1 ? "" : "s"} came through without a purchase date or price. A statement rarely carries them for shares — add what you remember and the tax work becomes possible.`,
+      // Said without naming the instrument type: this fires for funds as often
+      // as for shares, and "rarely carries them for shares" read as a mistake
+      // on a statement that held nothing but a mutual fund.
+      `${missing} holding${missing === 1 ? "" : "s"} came through without a purchase date or price — statements seldom carry them. Add what you remember and the tax work becomes possible.`,
     );
   }
 

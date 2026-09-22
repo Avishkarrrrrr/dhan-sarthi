@@ -77,3 +77,38 @@ describe("reading a CAS", () => {
     expect(r.warnings[0]).toMatch(/add them by hand/i);
   });
 });
+
+/*
+ * CAMS and KFintech put the scheme name *before* the ISIN, with the units, the
+ * NAV, the date and the registrar's own name in between. NSDL and CDSL put the
+ * instrument name after it. The parser only looked forward, so a real CAMS
+ * statement imported a fund called "INF22M001093" — the ISIN itself — which is
+ * the machine identifier appearing where the customer expects the fund's name.
+ *
+ * The layout below is modelled on a real CAMS statement's text layer.
+ */
+describe("a registrar statement that names the scheme before the ISIN", () => {
+  const camsLine =
+    "ISIN Cost Value (INR) 1831148 5,488.75 " +
+    "JIO180 - JioBlackRock Flexi Cap Fund - Direct - Growth (Non-Demat) " +
+    "555.165 21-Sep-2026 9.8867 CAMS INF22M001093 5,500.000 Total";
+
+  it("reads the scheme name that sits before the ISIN", () => {
+    const { holdings } = parseCasText(camsLine);
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0].name).toMatch(/JioBlackRock Flexi Cap Fund/);
+    expect(holdings[0].name).not.toBe(holdings[0].isin);
+  });
+
+  it("still classifies it from the ISIN, not the name", () => {
+    const { holdings } = parseCasText(camsLine);
+    expect(holdings[0].kind).toBe("mf");
+    expect(holdings[0].schemeName).toMatch(/JioBlackRock/);
+  });
+
+  it("does not disturb a statement that names the instrument after the ISIN", () => {
+    const cdslLine = "INE370A01013 ECO RECYCLING LIMITED 120 45.50 5460.00";
+    const { holdings } = parseCasText(cdslLine);
+    expect(holdings[0].name).toMatch(/ECO RECYCLING/);
+  });
+});
