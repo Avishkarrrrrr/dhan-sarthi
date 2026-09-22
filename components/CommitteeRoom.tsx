@@ -3,15 +3,21 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
+  ArrowRight,
   CalendarClock,
+  ChevronDown,
   Coins,
   Landmark,
   Receipt,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldX,
   TrendingUp,
+  UserCheck,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import type { Exchange } from "@/lib/agents/debate";
+import type { Exchange as Exchange_ } from "@/lib/agents/debate";
 import { ActionCard } from "./ActionCard";
 import { TaxPanel } from "./TaxPanel";
 import { useRef, useState } from "react";
@@ -27,6 +33,7 @@ import type {
   RiskProfile,
 } from "@/lib/contracts/types";
 import { streamCommittee } from "@/lib/client/api";
+import { ruleLabel } from "@/lib/compliance/labels";
 import { ASSET_LABELS } from "@/lib/format";
 
 /**
@@ -187,7 +194,7 @@ export function CommitteeRoom({
   const [seats, setSeats] = useState<Record<string, Seat>>({});
   const [phase, setPhase] = useState<Phase>("idle");
   const [allocation, setAllocation] = useState<Allocation | null>(null);
-  const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [exchanges, setExchanges] = useState<Exchange_[]>([]);
   const [verdict, setVerdict] = useState<ComplianceVerdict | null>(null);
   const [ticket, setTicket] = useState<EscalationTicket | null>(null);
   const [answer, setAnswer] = useState<FinalAnswer | null>(null);
@@ -413,9 +420,7 @@ export function CommitteeRoom({
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden border-t border-white/10 px-4 py-3"
           >
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-glow/70">
-              Strategist&apos;s proposal
-            </p>
+            <h4 className="mb-2 text-xs font-semibold text-white/70">Strategist&apos;s proposal</h4>
             <AllocationBar allocation={allocation} />
             <p className="mt-2 text-[11px] leading-relaxed text-white/70">{allocation.rationale}</p>
             <div className="mt-2 flex gap-4 text-[10px] text-white/45">
@@ -441,59 +446,90 @@ export function CommitteeRoom({
                   : "border-brand-accent/25 bg-brand-accent/10"
             }`}
           >
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/55">
-                Compliance review
-              </p>
+            {/*
+              The verdict reads as an institution signing something, not as
+              another message in a thread: an icon, the status as the largest
+              thing in the block, and the reasoning beneath it.
+            */}
+            <div className="flex items-start gap-2.5">
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
                   verdict.status === "block"
-                    ? "bg-red-400/25 text-red-100"
+                    ? "bg-red-400/20 text-red-200"
                     : verdict.status === "rewrite"
-                      ? "bg-amber-400/25 text-amber-100"
-                      : "bg-brand-glow/25 text-brand-glow"
+                      ? "bg-amber-400/20 text-amber-100"
+                      : "bg-brand-glow/20 text-brand-glow"
                 }`}
               >
-                {verdict.status === "pass" ? "Cleared" : verdict.status === "rewrite" ? "Adjusted" : "Blocked"}
+                {verdict.status === "block" ? (
+                  <ShieldX className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                ) : verdict.status === "rewrite" ? (
+                  <ShieldAlert className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                ) : (
+                  <ShieldCheck className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                )}
               </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-tight text-white">
+                  {verdict.status === "pass"
+                    ? "Cleared by compliance"
+                    : verdict.status === "rewrite"
+                      ? "Adjusted by compliance"
+                      : "Blocked by compliance"}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-white/75">
+                  {verdict.explanation}
+                </p>
+              </div>
             </div>
-            <p className="text-[11px] leading-relaxed text-white/80">{verdict.explanation}</p>
 
             {verdict.violations.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
+              <ul className="mt-2.5 space-y-1">
                 {verdict.violations.slice(0, 6).map((v, i) => (
-                  <span
+                  <li
                     key={`${v.rule}-${i}`}
-                    className={`rounded px-1.5 py-0.5 font-mono text-[9px] ${
-                      v.severity === "high"
-                        ? "bg-red-400/20 text-red-100"
-                        : v.severity === "med"
-                          ? "bg-amber-400/20 text-amber-100"
-                          : "bg-white/10 text-white/55"
-                    }`}
+                    className="flex items-center gap-1.5 text-[11px] text-white/65"
                   >
-                    {v.rule}
-                  </span>
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        v.severity === "high"
+                          ? "bg-red-300"
+                          : v.severity === "med"
+                            ? "bg-amber-300"
+                            : "bg-white/35"
+                      }`}
+                      aria-hidden
+                    />
+                    {ruleLabel(v.rule)}
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
 
             {ticket && (
-              <p className="mt-2 text-[11px] text-white/70">
-                Referred to a relationship manager as{" "}
-                <span className="font-mono text-white">{ticket.id}</span>{" "}
-                <a
-                  href="/rm"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-brand-glow underline underline-offset-2"
-                >
-                  open the queue →
-                </a>
-              </p>
+              <a
+                href="/rm"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-2.5 py-2 text-[11px] text-white/75 transition-colors hover:bg-white/10"
+              >
+                <UserCheck className="h-3.5 w-3.5 shrink-0 text-brand-glow" strokeWidth={1.75} aria-hidden />
+                <span className="flex-1">Waiting for a relationship manager to sign</span>
+                <ArrowRight className="h-3 w-3 shrink-0 text-white/40" strokeWidth={2} aria-hidden />
+              </a>
             )}
-            {answer && (
-              <p className="mt-1.5 font-mono text-[10px] text-white/35">Audit {answer.auditId}</p>
+
+            {/*
+              Reference numbers belong at the foot in small type, not inside a
+              sentence. They matter to an auditor, not to the customer reading
+              the verdict.
+            */}
+            {(ticket || answer) && (
+              <p className="mt-2 font-mono text-[9px] tabular-nums text-white/25">
+                {ticket && <>Ref {ticket.id}</>}
+                {ticket && answer && " · "}
+                {answer && <>Audit {answer.auditId}</>}
+              </p>
             )}
           </motion.div>
         )}
@@ -511,37 +547,9 @@ export function CommitteeRoom({
       */}
       {exchanges.length > 0 && (
         <div className="mt-3 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
-            Where they disagreed
-          </p>
+          <h4 className="text-xs font-semibold text-white/70">Where they disagreed</h4>
           {exchanges.map((x, i) => (
-            <motion.div
-              key={`${x.from}-${x.assetClass}-${i}`}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.12 }}
-              className="rounded-xl border border-white/10 bg-white/5 p-3"
-            >
-              <div className="mb-1 flex items-center gap-1.5 text-[10px]">
-                <span className="font-semibold text-brand-glow">{DESK_LABEL[x.from]}</span>
-                <span className="text-white/35">answering</span>
-                <span className="font-semibold text-white/80">{DESK_LABEL[x.to]}</span>
-                <span className="ml-auto font-mono tabular-nums text-white/45">
-                  {SHORT_LABEL[x.assetClass]} {x.before > 0 ? "+" : ""}
-                  {x.before.toFixed(2)}
-                  {x.after !== x.before && (
-                    <>
-                      {" → "}
-                      <span className={x.after > x.before ? "text-signal-up" : "text-signal-down"}>
-                        {x.after > 0 ? "+" : ""}
-                        {x.after.toFixed(2)}
-                      </span>
-                    </>
-                  )}
-                </span>
-              </div>
-              <p className="text-[11px] leading-relaxed text-white/75">{x.text}</p>
-            </motion.div>
+            <Exchange key={`${x.from}-${x.assetClass}-${i}`} x={x} index={i} />
           ))}
         </div>
       )}
@@ -558,6 +566,112 @@ export function CommitteeRoom({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * One exchange in the argument.
+ *
+ * The card used to lead with the prose and tuck the numbers into a small
+ * right-aligned monospace run. That was backwards twice over: the movement is
+ * the whole point of an exchange, and the sentences are generated from a
+ * template, so three of them stacked up repeated the same clause word for word
+ * and the section read like a mail merge rather than an argument.
+ *
+ * So the move leads — who challenged whom, over what, and the number before
+ * and after, on a track that shows the distance travelled. The reasoning is
+ * still there, one tap away, for anyone who wants it. Nothing is hidden that a
+ * regulator would need; it is just no longer shouting over the finding.
+ */
+function Exchange({ x, index }: { x: Exchange_; index: number }) {
+  const [open, setOpen] = useState(false);
+  const moved = x.after !== x.before;
+  const up = x.after > x.before;
+
+  // Tilts run -1..1, so the track maps that range onto its width.
+  const pos = (v: number) => `${((v + 1) / 2) * 100}%`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]"
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full px-3 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+        aria-expanded={open}
+      >
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <span className="font-semibold text-brand-glow">{DESK_LABEL[x.from]}</span>
+          <ArrowRight className="h-3 w-3 shrink-0 text-white/30" strokeWidth={2} aria-hidden />
+          <span className="font-semibold text-white/85">{DESK_LABEL[x.to]}</span>
+          <span className="ml-auto shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-medium text-white/60">
+            {SHORT_LABEL[x.assetClass]}
+          </span>
+        </div>
+
+        {/* The move itself, on a track from -1 to +1 */}
+        <div className="mt-2 flex items-center gap-2">
+          <span className="w-9 shrink-0 text-right font-mono text-[10px] tabular-nums text-white/40">
+            {x.before > 0 ? "+" : ""}
+            {x.before.toFixed(2)}
+          </span>
+          <span className="relative h-1 flex-1 rounded-full bg-white/10">
+            <span className="absolute inset-y-0 w-px bg-white/20" style={{ left: "50%" }} />
+            {moved && (
+              <motion.span
+                initial={{ width: 0 }}
+                animate={{ width: `${(Math.abs(x.after - x.before) / 2) * 100}%` }}
+                transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 + 0.2 }}
+                className={`absolute inset-y-0 rounded-full ${up ? "bg-brand-glow" : "bg-signal-down"}`}
+                style={up ? { left: pos(x.before) } : { right: `calc(100% - ${pos(x.before)})` }}
+              />
+            )}
+            <span
+              className={`absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ${
+                moved ? (up ? "bg-brand-glow" : "bg-signal-down") : "bg-white/40"
+              }`}
+              style={{ left: pos(x.after) }}
+            />
+          </span>
+          <span
+            className={`w-9 shrink-0 font-mono text-[10px] font-semibold tabular-nums ${
+              moved ? (up ? "text-brand-glow" : "text-signal-down") : "text-white/45"
+            }`}
+          >
+            {x.after > 0 ? "+" : ""}
+            {x.after.toFixed(2)}
+          </span>
+        </div>
+
+        <p className="mt-1.5 flex items-center gap-1 text-[10px] text-white/40">
+          {moved ? "Moved its call" : "Held its ground"}
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </p>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <p className="border-t border-white/10 px-3 py-2.5 text-[11px] leading-relaxed text-white/70">
+              {x.text}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -750,7 +864,7 @@ function TiltStrip({ tilt }: { tilt: Partial<Record<AssetClass, number>> }) {
     <div className="mt-1.5 space-y-1">
       {entries.map(([c, v]) => (
         <div key={c} className="flex items-center gap-1.5">
-          <span className="w-[42px] shrink-0 text-[8px] uppercase tracking-wide text-white/45">
+          <span className="w-[42px] shrink-0 text-[9px] text-white/45">
             {SHORT_LABEL[c]}
           </span>
           {/* Centre line with the bar growing left (under) or right (over) */}
