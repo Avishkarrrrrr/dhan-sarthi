@@ -20,7 +20,7 @@ import {
 import type { Exchange as Exchange_ } from "@/lib/agents/debate";
 import { ActionCard } from "./ActionCard";
 import { TaxPanel } from "./TaxPanel";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AssetClass } from "@/lib/data/types";
 import type {
   AgentId,
@@ -56,7 +56,15 @@ import { ASSET_LABELS } from "@/lib/format";
 const BEAT: Record<CommitteeEvent["type"], number> = {
   agent_start: 120,
   agent_view: 550,
-  debate: 1400,
+  /*
+   * An exchange gets the longest beat by some way, because it is the only
+   * moment where three things have to land: the connector drawing between the
+   * two desks, the line naming who is challenging whom, and the number moving.
+   * At 1.4s all three happened, but they happened faster than they could be
+   * taken in — the whole argument was over in four seconds. This is the part
+   * of the room worth watching, so it is the part given time.
+   */
+  debate: 2300,
   strategist: 800,
   compliance: 900,
   hitl: 600,
@@ -201,7 +209,10 @@ export function CommitteeRoom({
   const [open, setOpen] = useState<AgentId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
+  const grid = useRef<HTMLDivElement>(null);
   const [skippable, setSkippable] = useState(false);
+  /** The exchange currently playing out on the desk grid, if any. */
+  const [live, setLive] = useState<Exchange_ | null>(null);
 
   /*
    * The deliberation has a time axis, and it is presentational only.
@@ -231,6 +242,7 @@ export function CommitteeRoom({
     setPhase("deliberating");
     setAllocation(null);
     setExchanges([]);
+    setLive(null);
     setVerdict(null);
     setTicket(null);
     setAnswer(null);
@@ -263,8 +275,15 @@ export function CommitteeRoom({
             case "debate":
               setPhase("debating");
               setExchanges((x) => [...x, e.exchange]);
+              /*
+               * Also stage it on the grid, so the argument happens where the
+               * desks are rather than only in a list underneath them. Cleared
+               * by the next exchange, or when the strategist takes over.
+               */
+              setLive(e.exchange);
               break;
             case "strategist":
+              setLive(null);
               setPhase("reconciling");
               setAllocation(e.allocation);
               break;
@@ -395,7 +414,14 @@ export function CommitteeRoom({
       )}
 
       {/* The desks */}
-      <div className="grid grid-cols-2 gap-2 p-3">
+      {/*
+        The argument happens here, on the desks, not only in the list below
+        them. While an exchange is live the two desks involved are ringed —
+        challenger and challenged — and a line is drawn between their cards.
+        Everything it draws is the data: `from`, `to`, and the tilt that moved.
+      */}
+      <div ref={grid} className="relative grid grid-cols-2 gap-2 p-3">
+        <ExchangeLink grid={grid} live={live} />
         {DESKS.map((desk, i) => {
           const seat = seats[desk.id] ?? { status: "waiting" as const };
           return (
@@ -406,10 +432,32 @@ export function CommitteeRoom({
               index={i}
               expanded={open === desk.id}
               onToggle={() => setOpen(open === desk.id ? null : desk.id)}
+              challenging={live?.from === desk.id}
+              challenged={live?.to === desk.id}
+              live={live}
             />
           );
         })}
       </div>
+
+      {/* What is being argued, in one line, while it happens */}
+      <AnimatePresence>
+        {live && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+            className="mx-3 -mt-1 flex items-center gap-1.5 rounded-lg bg-brand-glow/10 px-2.5 py-1.5 text-[11px]"
+          >
+            <span className="font-semibold text-brand-glow">{DESK_LABEL[live.from]}</span>
+            <span className="text-white/45">challenges</span>
+            <span className="font-semibold text-white/85">{DESK_LABEL[live.to]}</span>
+            <span className="text-white/45">on</span>
+            <span className="font-medium text-white/70">{SHORT_LABEL[live.assetClass]}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Strategist */}
       <AnimatePresence>
@@ -566,6 +614,81 @@ export function CommitteeRoom({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * The line drawn between two arguing desks.
+ *
+ * Positions are measured rather than assumed, because the grid reflows — a desk
+ * expands when tapped, and the cards are not a fixed height. The measurement is
+ * taken when the live exchange changes and the line is drawn in an overlay that
+ * ignores pointer events, so it can never sit between a finger and a card.
+ */
+function ExchangeLink({
+  grid,
+  live,
+}: {
+  grid: React.RefObject<HTMLDivElement | null>;
+  live: Exchange_ | null;
+}) {
+  const [line, setLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+
+  useEffect(() => {
+    if (!live || !grid.current) {
+      setLine(null);
+      return;
+    }
+    const box = grid.current.getBoundingClientRect();
+    const from = grid.current.querySelector<HTMLElement>(`[data-desk="${live.from}"]`);
+    const to = grid.current.querySelector<HTMLElement>(`[data-desk="${live.to}"]`);
+    if (!from || !to) {
+      setLine(null);
+      return;
+    }
+    const a = from.getBoundingClientRect();
+    const b = to.getBoundingClientRect();
+    setLine({
+      x1: a.left - box.left + a.width / 2,
+      y1: a.top - box.top + a.height / 2,
+      x2: b.left - box.left + b.width / 2,
+      y2: b.top - box.top + b.height / 2,
+    });
+  }, [live, grid]);
+
+  return (
+    <AnimatePresence>
+      {line && (
+        <motion.svg
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full"
+          aria-hidden
+        >
+          <defs>
+            <marker id="ds-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0 0 L6 3 L0 6 z" fill="#3DE0A8" />
+            </marker>
+          </defs>
+          <motion.line
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            x1={line.x1}
+            y1={line.y1}
+            x2={line.x2}
+            y2={line.y2}
+            stroke="#3DE0A8"
+            strokeWidth="1.5"
+            strokeDasharray="4 3"
+            strokeOpacity="0.8"
+            markerEnd="url(#ds-arrow)"
+          />
+        </motion.svg>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -728,22 +851,31 @@ function DeskCard({
   index,
   expanded,
   onToggle,
+  challenging = false,
+  challenged = false,
+  live = null,
 }: {
   desk: (typeof DESKS)[number];
   seat: Seat;
   index: number;
   expanded: boolean;
   onToggle: () => void;
+  /** This desk is making the argument. */
+  challenging?: boolean;
+  /** This desk is the one being argued with. */
+  challenged?: boolean;
+  live?: Exchange_ | null;
 }) {
   const spoken = seat.status === "spoken";
   const thinking = seat.status === "thinking";
+  const inExchange = challenging || challenged;
 
   return (
     <motion.button
       layout
       onClick={spoken ? onToggle : undefined}
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: 1, y: 0, scale: inExchange ? 1.015 : 1 }}
       transition={{ delay: index * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className={`relative flex flex-col rounded-xl border p-2.5 text-left transition-colors ${
         spoken
@@ -751,7 +883,14 @@ function DeskCard({
           : thinking
             ? "border-brand-glow/40 bg-white/[0.05]"
             : "border-white/5 bg-white/[0.02]"
+      } ${
+        challenging
+          ? "!border-brand-glow/70 ring-1 ring-brand-glow/40"
+          : challenged
+            ? "!border-white/45 ring-1 ring-white/20"
+            : ""
       } ${expanded ? "col-span-2" : ""}`}
+      data-desk={desk.id}
     >
       <div className="flex items-center gap-1.5">
         <span
