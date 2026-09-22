@@ -350,6 +350,10 @@ export type CommitteeEvent =
         to: AgentId;
         assetClass: AssetClass;
         text: string;
+        /** The opposing desk's headline — the argument that carried. */
+        quote: string;
+        /** The conceding desk's answer, without the quote repeated inside it. */
+        reply: string;
         before: number;
         after: number;
       };

@@ -146,3 +146,51 @@ describe("the number and the sentence agree", () => {
     expect(e.text).toContain(e.after.toFixed(2));
   });
 });
+
+/*
+ * An exchange is one desk answering another, so the screen shows it as two
+ * voices. That only works if the two halves are separable: the first bubble is
+ * the opposing desk's own headline, the second is the answer to it. When the
+ * answer carried the quote inside it as well, every exchange printed its
+ * opponent's sentence twice and three of them read like a mail merge.
+ */
+describe("an exchange carries both voices, separately", () => {
+  it("quotes the opponent's headline verbatim", () => {
+    const { exchanges } = debate([
+      view("markets", { equity: 0.9 }, 0.95, "Trend is constructive"),
+      view("treasury", { equity: -0.9 }, 0.3),
+    ]);
+    const [e] = exchanges;
+    expect(e.quote).toBe("Trend is constructive");
+  });
+
+  it("does not repeat the quote inside the reply", () => {
+    const { exchanges } = debate([
+      view("markets", { equity: 0.9 }, 0.95, "Trend is constructive"),
+      view("treasury", { equity: -0.9 }, 0.3),
+    ]);
+    const [e] = exchanges;
+    expect(e.reply).not.toContain(e.quote);
+    // …while the full text, which the audit trail keeps, still carries both.
+    expect(e.text).toContain(e.quote);
+  });
+
+  it("states the move in the reply, so the bubble and the number agree", () => {
+    const { exchanges } = debate([
+      view("markets", { equity: 0.9 }, 0.95, "Trend is constructive"),
+      view("treasury", { equity: -0.9 }, 0.3),
+    ]);
+    const [e] = exchanges;
+    expect(e.reply).toContain(e.after.toFixed(2));
+  });
+
+  it("says a standoff is unresolved rather than claiming a move", () => {
+    const { exchanges } = debate([
+      view("markets", { equity: 0.9 }, 0.72, "Trend is weak"),
+      view("macro", { equity: 0.18 }, 0.7),
+    ]);
+    const [e] = exchanges;
+    expect(e.after).toBe(e.before);
+    expect(e.reply).toMatch(/unresolved/i);
+  });
+});

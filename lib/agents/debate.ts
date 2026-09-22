@@ -47,8 +47,19 @@ export interface Exchange {
   /** The desk that moved it. */
   to: AgentId;
   assetClass: AssetClass;
-  /** What the conceding desk says, in its own voice. */
+  /** What the conceding desk says, in its own voice. Quote included. */
   text: string;
+  /**
+   * The two halves of `text`, so the screen can show this as what it is — one
+   * desk answering another — instead of a paragraph with both voices inside it.
+   *
+   * `quote` is the opposing desk's own headline: the argument that won. `reply`
+   * is the conceding desk's answer with that quote removed, because on screen
+   * the quote is already above it in the other desk's own words. Printing both
+   * meant every exchange repeated its opponent's sentence inside its own.
+   */
+  quote: string;
+  reply: string;
   /** Tilt before and after, so the change is inspectable rather than asserted. */
   before: number;
   after: number;
@@ -131,11 +142,14 @@ export function debate(views: AgentView[]): { views: AgentView[]; exchanges: Exc
     const after = Math.abs(shifted - before) >= MIN_CONCESSION ? shifted : before;
     speaker.tilt[cls] = after;
 
+    const said = phrase(speaker, opponent, cls, before, after);
     exchanges.push({
       from: speaker.agentId,
       to: opponent.agentId,
       assetClass: cls,
-      text: phrase(speaker, opponent, cls, before, after),
+      text: said.text,
+      quote: said.quote,
+      reply: said.reply,
       before: round2(before),
       after,
     });
@@ -157,17 +171,28 @@ function phrase(
   cls: AssetClass,
   before: number,
   after: number,
-): string {
+): { text: string; quote: string; reply: string } {
   const other = DESK_NAMES[opponent.agentId];
   const asset = LABELS[cls];
   const moved = after !== before;
+  const quote = opponent.headline;
 
   if (!moved) {
-    return `${other} reads ${asset} differently — "${opponent.headline}" — but we are equally sure of our own reading, so this one goes to the strategist unresolved.`;
+    const reply = `We read ${asset} differently, and we are equally sure of our own reading — so this one goes to the strategist unresolved.`;
+    return {
+      text: `${other} reads ${asset} differently — "${quote}" — but we are equally sure of our own reading, so this one goes to the strategist unresolved.`,
+      quote,
+      reply,
+    };
   }
 
   const direction = after > before ? "up" : "down";
-  return `${other} makes the stronger case here: "${opponent.headline}". We are moving our ${asset} call ${direction}, from ${signed(before)} to ${signed(after)} — not all the way, because our own reading has not changed, only its weight against theirs.`;
+  const reply = `Fair — we are moving our ${asset} call ${direction}, from ${signed(before)} to ${signed(after)}. Not all the way: our own reading has not changed, only its weight against theirs.`;
+  return {
+    text: `${other} makes the stronger case here: "${quote}". We are moving our ${asset} call ${direction}, from ${signed(before)} to ${signed(after)} — not all the way, because our own reading has not changed, only its weight against theirs.`,
+    quote,
+    reply,
+  };
 }
 
 function signed(n: number): string {
