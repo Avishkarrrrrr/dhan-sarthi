@@ -9,6 +9,7 @@
  * move together.
  */
 const TTS_MODEL = "bulbul:v3";
+const STT_MODEL = "saaras:v3";
 
 // A warm, clear Indian female voice across every supported language, so the
 // advisor keeps one identity when the customer switches language mid-conversation.
@@ -117,7 +118,9 @@ export async function transcribe(audio: Blob, language: string): Promise<SttResu
 
   const form = new FormData();
   form.append("file", audio, "audio.webm");
-  form.append("model", "saarika:v2");
+  // saarika:v2 was retired and now answers 400 for every request, which made
+  // every spoken answer fail silently. saaras:v3 is Sarvam's named successor.
+  form.append("model", STT_MODEL);
   form.append("language_code", SPEAKERS[language] ? language : "en-IN");
 
   const res = await fetch("https://api.sarvam.ai/speech-to-text", {

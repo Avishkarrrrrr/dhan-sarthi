@@ -220,10 +220,38 @@ describe("the interview in the customer's own language", () => {
   });
 
   it("reads magnitudes in Tamil, Telugu and Bengali", () => {
-    expect(parseAmount("ஐம்பது லட்சம்")).toBe(undefined); // words, not numerals
+    expect(parseAmount("ஐம்பது லட்சம்")).toBe(5_000_000); // words, not numerals
     expect(parseAmount("50 லட்சம்")).toBe(5_000_000);
     expect(parseAmount("1 కోటి")).toBe(10_000_000);
     expect(parseAmount("25 হাজার")).toBe(25_000);
+  });
+
+  /*
+   * Transcripts Sarvam's STT actually returned on 3 Oct 2026, when Sarvam's
+   * own voice spoke each answer and saaras:v3 transcribed it. Before the
+   * number-word tables, every one of the amounts below read as "no answer".
+   */
+  it("reads amounts the way speech-to-text writes them back", () => {
+    expect(parseAmount("मेरी आय डेढ़ लाख रुपये महीना है।")).toBe(150_000);
+    expect(parseAmount("मी दर महिन्याला पन्नास हजार रुपये गुंतवू शकतो.")).toBe(50_000);
+    expect(parseAmount("நான் ஒவ்வொரு மாதமும் ஐம்பதாயிரம் ரூபாய் முதலீடு செய்ய முடியும்.")).toBe(50_000);
+    expect(parseAmount("నేను ప్రతి నెల యాభై వేల రూపాయలు పెట్టుబడి పెట్టగలను.")).toBe(50_000);
+    expect(parseAmount("నా ఆదాయం నెలకు ఒకటిన్నర లక్షల రూపాయలు.")).toBe(150_000);
+    expect(parseAmount("আমি প্রতি মাসে ৫০,০০০ টাকা বিনিয়োগ করতে পারি।")).toBe(50_000);
+    expect(parseYears("दहा वर्षांत.")).toBe(10);
+    expect(parsePercent("सुमारे वीस टक्के.")).toBe(20);
+  });
+
+  it("does not mistake everyday words for numbers", () => {
+    expect(parseAmount("मुझे बता दो")).toBe(undefined); // दो is "give" here
+    expect(parseAmount("दो लाख")).toBe(200_000); // and "two" here
+    expect(parseAmount("मेरी नौकरी अच्छी है")).toBe(undefined); // नौ inside नौकरी
+    expect(parseAmount("পঁচিশ হাজার")).toBe(25_000); // not বিশ (20)
+  });
+
+  it("reads Tamil risk words", () => {
+    expect(parseRisk("எனக்கு பாதுகாப்பான முதலீடு வேண்டும்.")).toBe("conservative");
+    expect(parseRisk("நான் தீவிரமான முதலீட்டாளர்.")).toBe("aggressive");
   });
 
   it("reads yes and no in every language", () => {

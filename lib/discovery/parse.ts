@@ -20,6 +20,96 @@ const WORD_NUMBERS: Record<string, number> = {
 };
 
 /*
+ * Numbers as Sarvam's STT actually writes them back. Tested by round trip on
+ * 3 Oct 2026 — Sarvam speaks a native answer, Sarvam transcribes it, this
+ * parser reads it — and outside English and Hindi most amounts came back as
+ * words ("पन्नास हजार", "యాభై వేల", "ஐம்பதாயிரம்") or in native digits
+ * ("৫০,০০০"), none of which the digit and English-word paths could read. A
+ * Marathi or Bengali customer saying how much they could invest was silently
+ * heard as saying nothing.
+ */
+const NATIVE_DIGIT_ZEROS = [0x0966, 0x09e6, 0x0be6, 0x0c66]; // Devanagari, Bengali, Tamil, Telugu
+
+/** "५०,०००" → "50,000". Everything downstream only has to know ASCII. */
+export function asciiDigits(text: string): string {
+  return text.replace(/[०-९০-৯௦-௯౦-౯]/g, (ch) => {
+    const c = ch.charCodeAt(0);
+    const zero = NATIVE_DIGIT_ZEROS.find((z) => c >= z && c <= z + 9)!;
+    return String(c - zero);
+  });
+}
+
+/*
+ * Number words per script, largest first so a compound is matched before the
+ * word inside it (पंचवीस before वीस, ఇరవై ఐదు before ఐదు). Fractions lead:
+ * "डेढ़ लाख" is how people say 1.5 lakh.
+ *
+ * Devanagari, Bengali and Telugu words are matched whole — not inside another
+ * word of the same script — because the short ones are real words too (नौ in
+ * नौकरी, বিশ in বিশ্বাস). Tamil joins number and magnitude into one word
+ * ("ஐம்பதாயிரம்"), so Tamil entries are stems matched anywhere.
+ */
+type Script = "deva" | "beng" | "telu" | "taml";
+const SCRIPT_RANGE: Record<Script, string> = {
+  deva: "\\u0900-\\u097F",
+  beng: "\\u0980-\\u09FF",
+  telu: "\\u0C00-\\u0C7F",
+  taml: "",
+};
+const INDIC_WORDS: [Script, string, number][] = [
+  // Hindi
+  ["deva", "डेढ़", 1.5], ["deva", "डेढ", 1.5], ["deva", "ढाई", 2.5],
+  ["deva", "सौ", 100], ["deva", "नब्बे", 90], ["deva", "अस्सी", 80], ["deva", "सत्तर", 70],
+  ["deva", "साठ", 60], ["deva", "पचास", 50], ["deva", "चालीस", 40], ["deva", "पच्चीस", 25],
+  ["deva", "तीस", 30], ["deva", "बीस", 20], ["deva", "पंद्रह", 15], ["deva", "दस", 10],
+  ["deva", "नौ", 9], ["deva", "आठ", 8], ["deva", "सात", 7], ["deva", "छह", 6],
+  ["deva", "पांच", 5], ["deva", "पाँच", 5], ["deva", "चार", 4], ["deva", "तीन", 3],
+  // Marathi
+  ["deva", "दीड", 1.5], ["deva", "अडीच", 2.5], ["deva", "शंभर", 100], ["deva", "नव्वद", 90],
+  ["deva", "ऐंशी", 80], ["deva", "पन्नास", 50], ["deva", "चाळीस", 40], ["deva", "पंचवीस", 25],
+  ["deva", "वीस", 20], ["deva", "पंधरा", 15], ["deva", "दहा", 10], ["deva", "नऊ", 9],
+  ["deva", "सहा", 6], ["deva", "पाच", 5],
+  // Bengali
+  ["beng", "দেড়", 1.5], ["beng", "আড়াই", 2.5], ["beng", "একশো", 100], ["beng", "নব্বই", 90],
+  ["beng", "আশি", 80], ["beng", "সত্তর", 70], ["beng", "ষাট", 60], ["beng", "পঞ্চাশ", 50],
+  ["beng", "চল্লিশ", 40], ["beng", "ত্রিশ", 30], ["beng", "পঁচিশ", 25], ["beng", "বিশ", 20],
+  ["beng", "পনেরো", 15], ["beng", "দশ", 10], ["beng", "নয়", 9], ["beng", "আট", 8],
+  ["beng", "সাত", 7], ["beng", "ছয়", 6], ["beng", "পাঁচ", 5], ["beng", "চার", 4], ["beng", "তিন", 3],
+  // Telugu
+  ["telu", "ఒకటిన్నర", 1.5], ["telu", "రెండున్నర", 2.5], ["telu", "వంద", 100],
+  ["telu", "తొంభై", 90], ["telu", "ఎనభై", 80], ["telu", "డెబ్బై", 70], ["telu", "అరవై", 60],
+  ["telu", "యాభై", 50], ["telu", "నలభై", 40], ["telu", "ముప్పై", 30], ["telu", "ఇరవై ఐదు", 25],
+  ["telu", "ఇరవై", 20], ["telu", "పదిహేను", 15], ["telu", "పది", 10], ["telu", "తొమ్మిది", 9],
+  ["telu", "ఎనిమిది", 8], ["telu", "ఏడు", 7], ["telu", "ఆరు", 6], ["telu", "ఐదు", 5],
+  ["telu", "నాలుగు", 4], ["telu", "మూడు", 3],
+  // Tamil (stems)
+  ["taml", "ஒன்றரை", 1.5], ["taml", "இரண்டரை", 2.5], ["taml", "நூறு", 100],
+  ["taml", "தொண்ணூறு", 90], ["taml", "எண்பது", 80], ["taml", "எழுபது", 70], ["taml", "அறுபது", 60],
+  ["taml", "ஐம்பத", 50], ["taml", "நாற்பத", 40], ["taml", "இருபத்தைந்து", 25], ["taml", "முப்பத", 30],
+  ["taml", "இருபத", 20], ["taml", "பதினைந்து", 15], ["taml", "பத்து", 10], ["taml", "ஒன்பது", 9],
+  ["taml", "எட்டு", 8], ["taml", "ஏழு", 7], ["taml", "ஐந்து", 5], ["taml", "நான்கு", 4],
+  ["taml", "மூன்று", 3],
+];
+/*
+ * One and two are also everyday words — एक is "a", दो is "give", ஒரு is "a" —
+ * so they count only beside a magnitude: "दो लाख" is two lakh, "बता दो" is not
+ * a number at all.
+ */
+const INDIC_WITH_MAGNITUDE: [Script, string, number][] = [
+  ["deva", "एक", 1], ["deva", "दो", 2], ["deva", "दोन", 2],
+  ["beng", "এক", 1], ["beng", "দুই", 2],
+  ["telu", "ఒక", 1], ["telu", "రెండు", 2],
+  ["taml", "ஒரு", 1], ["taml", "ஒன்று", 1], ["taml", "இரண்டு", 2],
+];
+
+function indicPattern(script: Script, word: string): RegExp {
+  const r = SCRIPT_RANGE[script];
+  return r ? new RegExp(`(?<![${r}])${word}(?![${r}])`) : new RegExp(word);
+}
+const INDIC = INDIC_WORDS.map(([sc, w, n]) => ({ re: indicPattern(sc, w), n }));
+const INDIC_MAG = INDIC_WITH_MAGNITUDE.map(([sc, w, n]) => ({ re: indicPattern(sc, w), n }));
+
+/*
  * Magnitude words, in every script the interview is offered in. Sarvam's STT
  * returns the customer's own language, so "ஐம்பது லட்சம்" arrives in Tamil and
  * an English-only matcher would silently read it as fifty.
@@ -30,8 +120,8 @@ const WORD_NUMBERS: Record<string, number> = {
  */
 const MULTIPLIERS: { re: RegExp; factor: number }[] = [
   { re: /(\bcrore\b|\bcr\b|\bkarod\b|करोड़|कोटी|கோடி|కోటి|কোটি)/i, factor: 1e7 },
-  { re: /(\blakh\b|\blac\b|\blakhs\b|लाख|லட்சம்|లక్ష|লাখ|লক্ষ)/i, factor: 1e5 },
-  { re: /(\bthousand\b|\bhazaar\b|\bhazar\b|\bhajar\b|हज़ार|हजार|ஆயிரம்|వేల|వెయ్యి|হাজার)/i, factor: 1e3 },
+  { re: /(\blakh\b|\blac\b|\blakhs\b|लाख|லட்ச|లక్ష|লাখ|লক্ষ)/i, factor: 1e5 },
+  { re: /(\bthousand\b|\bhazaar\b|\bhazar\b|\bhajar\b|हज़ार|हजार|ஆயிரம்|யிரம்|వేల|వెయ్యి|হাজার)/i, factor: 1e3 },
 ];
 
 /**
@@ -42,7 +132,7 @@ const MULTIPLIERS: { re: RegExp; factor: number }[] = [
  * "you did not say" would silently accept a non-answer.
  */
 export function parseAmount(text: string): number | undefined {
-  const t = (text ?? "").toLowerCase().replace(/,/g, "");
+  const t = asciiDigits(text ?? "").toLowerCase().replace(/,/g, "");
 
   // "50k" / "2.5l" shorthand.
   const short = t.match(/(\d+(?:\.\d+)?)\s*(k|l|cr)\b/);
@@ -64,17 +154,20 @@ export function parseAmount(text: string): number | undefined {
       }
     }
   }
-  if (value === undefined) return undefined;
+  if (value === undefined) value = INDIC.find((w) => w.re.test(t))?.n;
 
-  for (const m of MULTIPLIERS) {
-    if (m.re.test(t)) return value * m.factor;
+  const magnitude = MULTIPLIERS.find((m) => m.re.test(t))?.factor;
+  if (value === undefined && magnitude) {
+    // "दो लाख", "ஒரு லட்சம்" — or the magnitude alone: "लाख" is one lakh.
+    value = INDIC_MAG.find((w) => w.re.test(t))?.n ?? 1;
   }
-  return value;
+  if (value === undefined) return undefined;
+  return magnitude ? value * magnitude : value;
 }
 
 /** A number of years, from "5 years", "paanch saal", "by 2031". */
 export function parseYears(text: string, now = new Date()): number | undefined {
-  const t = (text ?? "").toLowerCase();
+  const t = asciiDigits(text ?? "").toLowerCase();
 
   // An explicit target year is more precise than a duration, so try it first.
   const year = t.match(/\b(20[2-9]\d)\b/);
@@ -94,7 +187,7 @@ export function parseYears(text: string, now = new Date()): number | undefined {
 
 /** A percentage, from "10 percent", "10%", "ten per cent". */
 export function parsePercent(text: string): number | undefined {
-  const t = (text ?? "").toLowerCase();
+  const t = asciiDigits(text ?? "").toLowerCase();
   const m = t.match(/(\d+(?:\.\d+)?)\s*(%|percent|per cent|pct|प्रतिशत|टक्के|சதவீத|శాతం|শতাংশ)/);
   if (m) return parseFloat(m[1]);
   // A bare small number in answer to a percentage question is a percentage.
@@ -118,10 +211,10 @@ export function parseYesNo(text: string): boolean | undefined {
 /** Risk appetite, from how someone describes themselves. */
 export function parseRisk(text: string): "conservative" | "moderate" | "aggressive" | undefined {
   const t = (text ?? "").toLowerCase();
-  if (/(\baggressive\b|\bhigh risk\b|\brisky\b|\bgrowth\b|\bbold\b|\bzyada risk\b|\bhigh\b|आक्रामक|आक्रमक|तीவிரமான|దూకుడు|আক্রমণাত্মক)/.test(t)) {
+  if (/(\baggressive\b|\bhigh risk\b|\brisky\b|\bgrowth\b|\bbold\b|\bzyada risk\b|\bhigh\b|आक्रामक|आक्रमक|தீவிர|దూకుడు|আক্রমণাত্মক)/.test(t)) {
     return "aggressive";
   }
-  if (/(\bconservative\b|\bsafe\b|\blow risk\b|\bcautious\b|\bcareful\b|\bsurakshit\b|\bkam risk\b|\blow\b|\bfd\b|\bdeposit\b|सुरक्षित|पाதுகாப்பான|సురక్షిత|নিরাপদ)/.test(t)) {
+  if (/(\bconservative\b|\bsafe\b|\blow risk\b|\bcautious\b|\bcareful\b|\bsurakshit\b|\bkam risk\b|\blow\b|\bfd\b|\bdeposit\b|सुरक्षित|பாதுகாப்ப|సురక్షిత|নিরাপদ)/.test(t)) {
     return "conservative";
   }
   if (/(\bmoderate\b|\bbalanced\b|\bmedium\b|\bmiddle\b|\bthoda\b|\baverage\b|संतुलित|சமநிலை|సమతుల్య|ভারসাম্য)/.test(t)) {

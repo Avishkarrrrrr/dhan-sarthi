@@ -168,6 +168,30 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        {/*
+          The bank's own console, named on the way in.
+          IDBI reviewed the prototype on 1 Oct and reported that only the
+          customer-facing interface was demonstrable: /rm has always existed
+          and always worked, but nothing on this page said so, so a reviewer
+          who did not already know the route never found it. A feature nobody
+          can reach is, for review purposes, a feature that is not there.
+        */}
+        <a
+          href="/rm"
+          className="mt-4 flex items-center justify-between rounded-2xl border border-brand-deep/15 bg-brand-deep px-4 py-3 text-white transition-colors hover:bg-brand-deep/90"
+        >
+          <span>
+            <span className="block text-xs font-semibold uppercase tracking-wide text-white/55">
+              For the bank
+            </span>
+            <span className="block text-sm font-semibold">Banker / RM console</span>
+            <span className="block text-xs text-white/60">
+              Approval queue, suitability sign-off, deposit-flight radar
+            </span>
+          </span>
+          <span aria-hidden className="pl-3 text-lg">→</span>
+        </a>
       </div>
 
       <PhoneFrame>
@@ -228,6 +252,17 @@ export default function Home() {
 
         {!onboarding && <NavBar active={screen} onChange={setScreen} />}
       </PhoneFrame>
+
+      {/*
+        The rail above is desktop-only, so below lg the console would again be
+        unreachable. Same link, stated once more where the rail is not.
+      */}
+      <a
+        href="/rm"
+        className="mb-6 text-sm font-medium text-brand-deep underline underline-offset-4 lg:hidden"
+      >
+        Open the Banker / RM console →
+      </a>
     </main>
   );
 }

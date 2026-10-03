@@ -76,8 +76,11 @@ export async function POST(req: NextRequest) {
   if (provider.name === "fallback") {
     return NextResponse.json({
       analysis: {
-        quarter: `Live analysis for "${query}" needs an AI key.`,
-        risks: "Add a GEMINI_API_KEY in .env to analyze any company on demand.",
+        quarter: `Live analysis for "${query}" needs the reasoning model.`,
+        // Bedrock's grant is scoped to the sandbox instance's IAM role, so this
+        // path is what a laptop sees. Naming the retired Gemini key here sent
+        // people to add a variable that no longer does anything.
+        risks: "On-demand analysis runs on Bedrock from the sandbox instance.",
         projections: "Meanwhile, try a featured company (TCS, Infosys, Reliance, HDFC Bank) — those work offline.",
         verdict: "No verdict available without the AI engine.",
       },
